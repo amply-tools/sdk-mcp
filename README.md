@@ -1,0 +1,105 @@
+# `@amplytools/amply-mcp`
+
+Local MCP server for [Amply](https://amply.tools) — lets your AI agent sign up, log in, create projects, register applications, and fetch API keys without ever opening the Amply admin UI. Pairs with the [`amply-integration` skill](../amply-skill/) for a hands-free SDK integration.
+
+## Why this exists
+
+When an agent integrates the Amply SDK into a mobile app, the human still has to:
+
+1. Sign up at `amply.tools`.
+2. Create a project.
+3. Register an application (bundleId + platform).
+4. Copy `appId` / `apiKeyPublic` / `apiKeySecret` from the admin UI into `.env.local`.
+
+This MCP eliminates steps 1–4. The agent calls `amply_bootstrap_for_app` and gets back the ready-to-paste env block.
+
+## Install
+
+### Claude Code
+
+```bash
+claude mcp add amply -- npx -y @amplytools/amply-mcp
+```
+
+After the first publish to npm. Until then, install from a local checkout:
+
+```bash
+git clone https://github.com/amply-tools/amply-mcp.git
+cd amply-mcp && yarn install && yarn build
+claude mcp add amply -- node "$(pwd)/dist/index.js"
+```
+
+### Codex CLI
+
+```bash
+codex mcp add amply --command npx --args -y @amplytools/amply-mcp
+```
+
+(Spelling depends on the Codex CLI version — run `codex mcp --help` first if unsure.)
+
+### Other hosts
+
+Any MCP host that supports stdio servers can launch the bundled `dist/index.js` directly. The binary speaks the standard MCP JSON-RPC protocol over stdin/stdout.
+
+## Configuration
+
+| Env var | Purpose | Default |
+|---|---|---|
+| `AMPLY_ENDPOINT` | Override the GraphQL admin endpoint. Pass either a full URL (`https://api.amply.tools/admin/graphql/`) or just the host — the suffix is auto-appended. | `https://api.amply.tools/admin/graphql/` |
+| `AMPLY_CREDS_FILE` | Override where the JWT + refresh token are persisted. Must be an absolute path. | `~/.amply/credentials.json` |
+| `AMPLY_MCP_DEBUG` | Set to `1` to emit diagnostic stderr logs (with secret redaction). | unset |
+
+Endpoint can also be passed as `--endpoint <url>` to the binary.
+
+## Tools
+
+| Tool | What it does |
+|---|---|
+| `amply_status` | Reports current endpoint + whether creds are cached. Never hits the network. |
+| `amply_signup` | Create new account + organization. Caches the session. |
+| `amply_login` | Log in to an existing account. Caches the session. |
+| `amply_logout` | Clears the cached session. |
+| `amply_whoami` | Returns the current user + organization (calls `me` query). |
+| `amply_list_projects` | Lists projects (paginated). |
+| `amply_create_project` | Creates a project. |
+| `amply_list_applications` | Lists applications under a project (projectId required). |
+| `amply_get_application` | Fetches one application by UUID, including its API keys. |
+| `amply_create_application` | Registers a new app; returns the auto-generated first API key. |
+| `amply_create_api_key` | Issues an additional API key for an existing application. |
+| `amply_bootstrap_for_app` | One-shot: ensures project + application + first key. The recommended entry point for AI agents. |
+
+Every tool returns a JSON body inside the MCP `content[0].text` block. On failure, `isError: true` is set and the JSON contains `{ error: { code, message, hint? } }` where `code` is one of: `auth_required`, `invalid_credentials`, `not_found`, `validation_error`, `conflict`, `access_denied`, `network_error`, `graphql_error`, `internal_error`.
+
+## Security model
+
+- **JWT + refresh token are cached in plaintext** at `~/.amply/credentials.json` with mode `0600`. This is acceptable for a developer machine, but **do not** use on shared machines or commit the credentials file anywhere. Tokens are not returned through any tool's response.
+- **The "secret" API key** (`apiKeySecret`) is a real secret in the sense that the backend hands it back once at creation time. It is, however, designed to be embedded in your mobile app's bundle — it's a per-application identifier, not a server-side admin key. Don't share it across apps, and don't commit it to a public repo.
+- **stdio transport** means anything the MCP writes to stdout is part of the protocol. The server avoids stdout logging entirely; diagnostic output goes to stderr behind `AMPLY_MCP_DEBUG=1`, with a regex sweep that redacts hex-secret-shaped strings before writing.
+- **`AMPLY_CREDS_FILE`** must be an absolute path. Relative paths, paths containing `..`, and paths under common code-repo directories are flagged at startup. Atomic write (`tmp` + `rename`) reduces (but does not eliminate) the chance of a partial-write on a refresh-token rotation; on a partial-write the user will be logged out and must re-login.
+
+## Typical flow for an agent
+
+```
+amply_status                              → { authenticated: false, ... }
+amply_signup({email, password, name, organization})
+                                           → caches session
+amply_bootstrap_for_app({bundleId: "com.acme.app", name: "Acme", platform: "iOS",
+                         projectName: "Acme"})
+                                           → { application, firstApiKey: { public, secret }, envBlock }
+```
+
+The agent pastes `envBlock` into `.env.local` and is done.
+
+## Development
+
+```bash
+yarn install
+yarn build       # tsup → dist/index.js (single ESM file with deps bundled)
+yarn typecheck   # tsc --noEmit, strict
+yarn dev         # tsup watch
+yarn smoke       # JSON-RPC smoke test against a local stub
+```
+
+## License
+
+Apache 2.0 — same as the Amply SDK.

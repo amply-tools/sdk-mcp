@@ -1,0 +1,56 @@
+{
+  "name": "@amplytools/amply-mcp",
+  "version": "0.1.0",
+  "description": "Local MCP server for Amply — lets AI agents sign up, log in, create projects/applications, and fetch API keys from the Amply admin GraphQL API.",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "amply-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --import tsx 'tests/**/*.test.ts'",
+    "smoke": "node --test --import tsx tests/smoke.test.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "graphql": "^16.9.0",
+    "graphql-request": "^7.1.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "tsup": "^8.3.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/amply-tools/amply-mcp.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "mcp",
+    "amply",
+    "claude",
+    "codex",
+    "model-context-protocol",
+    "mobile",
+    "analytics"
+  ]
+}

@@ -21,7 +21,7 @@
     "dev": "tsup --watch",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
-    "test": "node --test --import tsx 'tests/**/*.test.ts'",
+    "test": "find tests -name '*.test.ts' -print0 | xargs -0 node --test --import tsx",
     "smoke": "node --test --import tsx tests/smoke.test.ts"
   },
   "dependencies": {
@@ -39,7 +39,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/amply-tools/amply-mcp.git"
+    "url": "https://github.com/amply-tools/sdk-mcp.git"
   },
   "publishConfig": {
     "access": "public"

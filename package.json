@@ -39,7 +39,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/amply-tools/sdk-mcp.git"
+    "url": "git+https://github.com/amply-tools/sdk-mcp.git"
   },
   "publishConfig": {
     "access": "public"

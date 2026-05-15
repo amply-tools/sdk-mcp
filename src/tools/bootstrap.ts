@@ -6,7 +6,7 @@ import { AmplyError } from '../errors.js';
 import { ok, safe, type CallToolResult } from './_helpers.js';
 
 const bootstrapSchema = z.object({
-  bundleId: z.string().min(1).describe('App bundle id, e.g. com.seabook.app.'),
+  bundleId: z.string().min(1).describe('App bundle id, e.g. com.acme.app.'),
   name: z.string().min(1).describe('Human-readable application name shown in the Amply admin.'),
   platform: z.enum(['iOS', 'Android']),
   projectName: z.string().min(1).optional().describe('If supplied AND the project doesn’t already exist, it will be created. If omitted, the first available project is used.'),

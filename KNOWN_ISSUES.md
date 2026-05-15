@@ -55,17 +55,7 @@ Neither has been run on a clean machine against the published package. Before
 npm publish: verify both, plus at least one other host (Cursor / Windsurf), and
 update the README with corrections.
 
-## 4. No real end-to-end smoke against a running backend yet
-
-**Severity:** medium (publish blocker).
-
-`tools/list` works via JSON-RPC; `amply_status` works without auth. No tool has
-actually exchanged messages with a running Amply backend in CI. Before public
-release, run signup → bootstrap → verify API key shape against
-`https://api.amply.tools` (or a local backend mirror), and add a recorded
-fixture to the test suite.
-
-## 5. Defaults to production endpoint without a tenant override
+## 4. Defaults to production endpoint without a tenant override
 
 **Severity:** low.
 

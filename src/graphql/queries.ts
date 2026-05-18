@@ -74,3 +74,42 @@ export const APPLICATION = gql`
     }
   }
 `;
+
+/**
+ * Campaign list under a project. CampaignConnection is Relay-style.
+ */
+export const CAMPAIGNS = gql`
+  query Campaigns($projectId: UUID!, $first: Int, $after: String) {
+    campaigns(projectId: $projectId, pagination: { first: $first, after: $after }) {
+      totalCount
+      pageInfo { hasNextPage endCursor }
+      edges {
+        node {
+          id
+          name
+          type
+          state
+          createdAt
+          updatedAt
+        }
+      }
+    }
+  }
+`;
+
+export const CAMPAIGN = gql`
+  query Campaign($id: UUID!) {
+    campaign(id: $id) {
+      id
+      name
+      type
+      state
+      project { id name }
+      triggering
+      targeting
+      content
+      createdAt
+      updatedAt
+    }
+  }
+`;

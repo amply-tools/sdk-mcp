@@ -82,3 +82,39 @@ export const API_KEY_CREATE = gql`
     }
   }
 `;
+
+/**
+ * campaignCreate(input: CampaignInput!): Campaign
+ *
+ * CampaignInput required fields: name (String!), type (CampaignType!),
+ * targeting ([TargetingInput!]), triggering (TriggeringInput!).
+ * Optional: state, project, content (JSON).
+ */
+export const CAMPAIGN_CREATE = gql`
+  mutation CampaignCreate($input: CampaignInput!) {
+    campaignCreate(input: $input) {
+      id
+      name
+      type
+      state
+      project { id name }
+      createdAt
+    }
+  }
+`;
+
+/**
+ * campaignChangeState(id: UUID!, input: CampaignStateInput!): Campaign
+ * CampaignStateInput is just { state: CampaignState! }.
+ */
+export const CAMPAIGN_CHANGE_STATE = gql`
+  mutation CampaignChangeState($id: UUID!, $input: CampaignStateInput!) {
+    campaignChangeState(id: $id, input: $input) {
+      id
+      name
+      type
+      state
+      updatedAt
+    }
+  }
+`;

@@ -21,6 +21,12 @@ import {
 import { makeCreateApiKeyTool } from './tools/apiKeys.js';
 import { makeBootstrapForAppTool } from './tools/bootstrap.js';
 import { makeEnsureAppTool } from './tools/ensure.js';
+import {
+  makeCreateCampaignFromTemplateTool,
+  makeGetCampaignTool,
+  makeListCampaignsTool,
+  makeSetCampaignStateTool,
+} from './tools/campaigns.js';
 import { safeLog } from './tools/_helpers.js';
 
 const PKG_VERSION = '0.1.0';
@@ -67,6 +73,10 @@ function allTools() {
     makeCreateApiKeyTool(),
     makeEnsureAppTool(),
     makeBootstrapForAppTool(),
+    makeListCampaignsTool(),
+    makeGetCampaignTool(),
+    makeSetCampaignStateTool(),
+    makeCreateCampaignFromTemplateTool(),
   ];
 }
 

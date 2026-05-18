@@ -252,7 +252,8 @@ function buildTemplate3(name: string, params: z.infer<typeof t3Params>): Campaig
     type: 'DeepLink',
     state: 'Draft',
     triggering: {
-      event: { name: 'SessionStart', type: 'system', params: [] },
+      // SDK constant: SystemEvents.SESSION_START = "SessionStarted" (events/Event.kt).
+      event: { name: 'SessionStarted', type: 'system', params: [] },
       repeat: { repeatType: 'every', repeatEntity: 'session', repeatValue: params.sessionNumber },
       limit: {},
     },

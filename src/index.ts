@@ -14,11 +14,13 @@ import {
 } from './tools/projects.js';
 import {
   makeCreateApplicationTool,
+  makeFindApplicationTool,
   makeGetApplicationTool,
   makeListApplicationsTool,
 } from './tools/applications.js';
 import { makeCreateApiKeyTool } from './tools/apiKeys.js';
 import { makeBootstrapForAppTool } from './tools/bootstrap.js';
+import { makeEnsureAppTool } from './tools/ensure.js';
 import { safeLog } from './tools/_helpers.js';
 
 const PKG_VERSION = '0.1.0';
@@ -60,8 +62,10 @@ function allTools() {
     makeCreateProjectTool(),
     makeListApplicationsTool(),
     makeGetApplicationTool(),
+    makeFindApplicationTool(),
     makeCreateApplicationTool(),
     makeCreateApiKeyTool(),
+    makeEnsureAppTool(),
     makeBootstrapForAppTool(),
   ];
 }

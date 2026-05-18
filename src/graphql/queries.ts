@@ -26,8 +26,8 @@ export const ME = gql`
  * If a tenant ever crosses 200 projects, we'll switch to multi-page fetching.
  */
 export const PROJECTS = gql`
-  query Projects($first: Int) {
-    projects(pagination: { first: $first }) {
+  query Projects($first: Int, $after: String) {
+    projects(pagination: { first: $first, after: $after }) {
       totalCount
       pageInfo { hasNextPage endCursor }
       edges {

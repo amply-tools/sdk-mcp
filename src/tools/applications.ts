@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { AmplyClient } from '../graphql/client.js';
 import { APPLICATION_CREATE } from '../graphql/mutations.js';
-import { APPLICATIONS, APPLICATION } from '../graphql/queries.js';
+import { APPLICATIONS, APPLICATION, PROJECTS } from '../graphql/queries.js';
 import { AmplyError } from '../errors.js';
 import { ok, safe, type CallToolResult } from './_helpers.js';
 
@@ -22,6 +22,12 @@ const getSchema = z.object({
   id: z.string().uuid(),
 });
 
+const findSchema = z.object({
+  bundleId: z.string().min(1, 'bundleId required (e.g. com.example.app)'),
+  platform: platformSchema,
+  projectId: z.string().uuid().optional().describe('Scope to a single project. If omitted, scans every project in the organization (paginated).'),
+});
+
 interface ApiKey { public: string; secret?: string; lastUsed: string | null }
 interface ApplicationNode {
   id: string;
@@ -35,6 +41,64 @@ interface ApplicationNode {
 interface ApplicationsResponse { applications: ApplicationNode[] }
 interface ApplicationResponse { application: ApplicationNode | null }
 interface ApplicationCreateResponse { applicationCreate: ApplicationNode }
+interface ProjectsResponse {
+  projects: {
+    totalCount: number;
+    pageInfo: { hasNextPage: boolean; endCursor: string | null };
+    edges: Array<{ node: { id: string; name: string } }>;
+  };
+}
+
+/**
+ * Paginate through every project the org owner can see.
+ * Used by tools that need to scan applications across all projects
+ * (find_application without projectId, ensure_app cross-project guard).
+ */
+export async function listAllProjects(client: AmplyClient): Promise<Array<{ id: string; name: string }>> {
+  const out: Array<{ id: string; name: string }> = [];
+  let after: string | null = null;
+  // Hard cap pages to avoid runaway loops on a buggy backend.
+  for (let i = 0; i < 100; i++) {
+    const data: ProjectsResponse = await client.request<ProjectsResponse>(PROJECTS, { first: 50, after });
+    out.push(...data.projects.edges.map((e) => e.node));
+    if (!data.projects.pageInfo.hasNextPage) return out;
+    after = data.projects.pageInfo.endCursor;
+    if (!after) return out;
+  }
+  return out;
+}
+
+/**
+ * List all applications in a project. The backend `applications(projectId)`
+ * is an unpaginated array, so this is a single round-trip.
+ */
+export async function listApplicationsInProject(client: AmplyClient, projectId: string): Promise<ApplicationNode[]> {
+  const data = await client.request<ApplicationsResponse>(APPLICATIONS, { projectId });
+  return data.applications;
+}
+
+/**
+ * Find every application matching (bundleId, platform) across one or all projects.
+ * Returns matches sorted with the resolvedProject (if given) first.
+ */
+export async function findApplicationsByBundle(
+  client: AmplyClient,
+  bundleId: string,
+  platform: 'iOS' | 'Android',
+  projectId?: string,
+): Promise<Array<{ application: ApplicationNode; projectId: string }>> {
+  const projects = projectId ? [{ id: projectId, name: '<scoped>' }] : await listAllProjects(client);
+  const out: Array<{ application: ApplicationNode; projectId: string }> = [];
+  for (const p of projects) {
+    const apps = await listApplicationsInProject(client, p.id);
+    for (const a of apps) {
+      if (a.bundleId === bundleId && a.platform === platform) {
+        out.push({ application: a, projectId: p.id });
+      }
+    }
+  }
+  return out;
+}
 
 export function makeListApplicationsTool() {
   return {
@@ -64,6 +128,39 @@ export function makeGetApplicationTool() {
           throw new AmplyError('not_found', `No application with id ${input.id} (or access denied).`);
         }
         return ok({ application: data.application });
+      });
+    },
+  };
+}
+
+export function makeFindApplicationTool() {
+  return {
+    name: 'amply_find_application',
+    description: 'Find an existing application by bundleId + platform. Returns the application (without secrets) plus its owning project, or null if none found. If `projectId` is supplied, scoped to that project; otherwise scans every project in the org (paginated). Pure read — no side effects. Use this in a skill preflight before deciding to create.',
+    inputSchema: findSchema,
+    async handler(input: z.infer<typeof findSchema>): Promise<CallToolResult> {
+      return safe(async () => {
+        const client = new AmplyClient();
+        const matches = await findApplicationsByBundle(client, input.bundleId, input.platform, input.projectId);
+        if (matches.length === 0) {
+          return ok({ found: false, application: null, duplicates: [] });
+        }
+        const first = matches[0]!;
+        return ok({
+          found: true,
+          application: {
+            id: first.application.id,
+            bundleId: first.application.bundleId,
+            name: first.application.name,
+            platform: first.application.platform,
+            project: first.application.project,
+          },
+          duplicates: matches.slice(1).map((m) => ({
+            applicationId: m.application.id,
+            projectId: m.projectId,
+            projectName: m.application.project.name,
+          })),
+        });
       });
     },
   };

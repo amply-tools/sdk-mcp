@@ -59,7 +59,7 @@ update the README with corrections.
 
 **Severity:** low.
 
-Without `AMPLY_ENDPOINT`, the MCP points at `https://api.amply.tools/admin/graphql/`.
+Without `AMPLY_ENDPOINT`, the MCP points at `https://api.amply.tools/mcp/`.
 For most users this is correct; for self-hosted or test tenants on a different
 host, they must override. Documented in README's Configuration table and in the
 agent flow ("if the endpoint is wrong, set `AMPLY_ENDPOINT` and restart the

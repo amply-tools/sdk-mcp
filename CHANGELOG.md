@@ -2,6 +2,12 @@
 
 All notable changes to `@amplytools/amply-mcp` are documented here. Versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] — 2026-05-25
+
+### Changed
+
+- Default GraphQL endpoint is now `https://api.amply.tools/mcp/` — a dedicated route for MCP client traffic that can be rate-limited / scoped independently of the admin UI. `AMPLY_ENDPOINT` still overrides it; a bare host gets `/mcp/` appended.
+
 ## [0.2.1] — 2026-05-25
 
 ### Fixed

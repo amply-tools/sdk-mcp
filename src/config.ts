@@ -2,12 +2,15 @@ import { homedir } from 'node:os';
 import { isAbsolute, join, normalize, sep } from 'node:path';
 
 /**
- * Resolves the Amply admin GraphQL endpoint from env / CLI overrides.
+ * Resolves the Amply GraphQL endpoint from env / CLI overrides.
+ *
+ * MCP client traffic targets the dedicated `/mcp` GraphQL route, which can be
+ * rate-limited / scoped independently of the admin UI.
  *
  * Precedence (highest first):
  *   1. AMPLY_ENDPOINT env var
  *   2. --endpoint <url> CLI flag passed to the MCP server
- *   3. Default: https://api.amply.tools/admin/graphql/
+ *   3. Default: https://api.amply.tools/mcp/
  */
 export function resolveEndpoint(argv: readonly string[] = process.argv): string {
   const fromEnv = process.env.AMPLY_ENDPOINT;
@@ -16,7 +19,7 @@ export function resolveEndpoint(argv: readonly string[] = process.argv): string 
   const idx = argv.findIndex((a) => a === '--endpoint');
   if (idx >= 0 && argv[idx + 1]) return normaliseEndpoint(argv[idx + 1] as string);
 
-  return 'https://api.amply.tools/admin/graphql/';
+  return 'https://api.amply.tools/mcp/';
 }
 
 /**
@@ -67,9 +70,18 @@ function validateCredsPath(raw: string): void {
 function normaliseEndpoint(raw: string): string {
   let url = raw.trim();
   if (!url.endsWith('/')) url = `${url}/`;
-  // Allow users to pass a base URL like `https://api.amply.tools` and we append the admin path for them.
-  if (!url.includes('/admin/graphql')) {
-    url = `${url.replace(/\/+$/, '')}/admin/graphql/`;
+  // A URL that already targets `/mcp` is used as-is; a bare base URL (e.g.
+  // `https://api.amply.tools`) gets the `/mcp/` path appended. Inspect the
+  // pathname, not the whole string, so a host like `mcp.example.com` isn't
+  // mistaken for an already-complete path.
+  let path: string;
+  try {
+    path = new URL(url).pathname;
+  } catch {
+    path = url;
   }
-  return url;
+  if (path.includes('/mcp')) {
+    return url;
+  }
+  return `${url.replace(/\/+$/, '')}/mcp/`;
 }

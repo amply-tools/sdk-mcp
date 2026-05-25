@@ -104,5 +104,5 @@ test('mcp boots, advertises tools, amply_status works without creds', async () =
   ).result.content[0]!.text;
   const parsed = JSON.parse(text) as { authenticated: boolean; endpoint: string };
   assert.equal(parsed.authenticated, false);
-  assert.ok(parsed.endpoint.includes('/admin/graphql/'));
+  assert.ok(parsed.endpoint.includes('/mcp/'));
 });

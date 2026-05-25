@@ -45,7 +45,7 @@ Any MCP host that supports stdio servers can launch the bundled `dist/index.js` 
 
 | Env var | Purpose | Default |
 |---|---|---|
-| `AMPLY_ENDPOINT` | Override the GraphQL admin endpoint. Pass either a full URL (`https://api.amply.tools/admin/graphql/`) or just the host — the suffix is auto-appended. | `https://api.amply.tools/admin/graphql/` |
+| `AMPLY_ENDPOINT` | Override the GraphQL endpoint. Pass either a full URL (`https://api.amply.tools/mcp/`) or just the host — `/mcp/` is auto-appended. | `https://api.amply.tools/mcp/` |
 | `AMPLY_CREDS_FILE` | Override where the JWT + refresh token are persisted. Must be an absolute path. | `~/.amply/credentials.json` |
 | `AMPLY_MCP_DEBUG` | Set to `1` to emit diagnostic stderr logs (with secret redaction). | unset |
 

@@ -24,18 +24,18 @@ claude mcp add amply -- npx -y @amplytools/amply-mcp
 After the first publish to npm. Until then, install from a local checkout:
 
 ```bash
-git clone https://github.com/amply-tools/amply-mcp.git
-cd amply-mcp && yarn install && yarn build
+git clone https://github.com/amply-tools/sdk-mcp.git
+cd sdk-mcp && yarn install && yarn build
 claude mcp add amply -- node "$(pwd)/dist/index.js"
 ```
 
 ### Codex CLI
 
 ```bash
-codex mcp add amply --command npx --args -y @amplytools/amply-mcp
+codex mcp add amply -- npx -y @amplytools/amply-mcp
 ```
 
-(Spelling depends on the Codex CLI version — run `codex mcp --help` first if unsure.)
+(Syntax depends on the Codex CLI version — verified on `codex-cli 0.128`. Run `codex mcp --help` first if unsure; older builds used `--command`/`--args` flags.)
 
 ### Other hosts
 

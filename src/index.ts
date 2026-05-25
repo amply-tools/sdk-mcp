@@ -29,7 +29,8 @@ import {
 } from './tools/campaigns.js';
 import { safeLog } from './tools/_helpers.js';
 
-const PKG_VERSION = '0.1.0';
+declare const __PKG_VERSION__: string;
+const PKG_VERSION = __PKG_VERSION__;
 
 async function main(): Promise<void> {
   const server = new McpServer({

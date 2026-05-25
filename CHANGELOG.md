@@ -2,6 +2,12 @@
 
 All notable changes to `@amplytools/amply-mcp` are documented here. Versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] — 2026-05-25
+
+### Fixed
+
+- Server `serverInfo.version` advertised on MCP `initialize` was hard-coded and lagged the package version (0.2.0 reported `0.1.0`). The version is now inlined from `package.json` at build time, so it can no longer drift.
+
 ## [0.2.0] — 2026-05-25
 
 Adds idempotent app resolution, campaign tooling, and corrected install docs. Tool count 12 → 18.

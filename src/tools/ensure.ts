@@ -215,33 +215,37 @@ interface EnvBlockArgs { appId: string; publicKey: string; secret: string; platf
 // RN-flavour variant when relevant. The caller (skill / agent) picks the form
 // that matches their project type detected in skill Phase 1.
 export function renderEnvBlock({ appId, publicKey, secret, platform }: EnvBlockArgs): string {
+  // The historical block (active EXPO_PUBLIC_* lines) is kept as the default
+  // so existing RN/Expo automation that consumed .env files keeps working.
+  // The platform-native variant is added as a commented block — native iOS /
+  // Android integrators uncomment that and remove the EXPO_PUBLIC_* lines.
   if (platform === 'iOS') {
     return [
-      `# Amply (iOS). Do not commit. Choose the variant matching your project type.`,
-      `# --- Native Swift (xcconfig → Info.plist, or .env consumed by build phase) ---`,
-      `AMPLY_APP_ID=${appId}`,
-      `AMPLY_KEY_PUBLIC=${publicKey}`,
-      `AMPLY_KEY_SECRET=${secret}`,
-      `# --- React Native / Expo (use this instead, in .env.local) ---`,
-      `# EXPO_PUBLIC_AMPLY_APP_ID=${appId}`,
-      `# EXPO_PUBLIC_AMPLY_KEY_PUBLIC=${publicKey}`,
-      `# EXPO_PUBLIC_AMPLY_KEY_SECRET=${secret}`,
+      `# Amply (iOS). Do not commit.`,
+      `# RN/Expo (default — active):`,
+      `EXPO_PUBLIC_AMPLY_APP_ID=${appId}`,
+      `EXPO_PUBLIC_AMPLY_KEY_PUBLIC=${publicKey}`,
+      `EXPO_PUBLIC_AMPLY_KEY_SECRET=${secret}`,
+      `# Native Swift (uncomment and remove the EXPO_PUBLIC_* block above if you have a pure Swift project):`,
+      `# AMPLY_APP_ID=${appId}`,
+      `# AMPLY_KEY_PUBLIC=${publicKey}`,
+      `# AMPLY_KEY_SECRET=${secret}`,
     ].join('\n');
   }
   if (platform === 'Android') {
     return [
-      `# Amply (Android). Do not commit. Choose the variant matching your project type.`,
-      `# --- Native Kotlin (local.properties + BuildConfig field) ---`,
-      `amply.appId=${appId}`,
-      `amply.keyPublic=${publicKey}`,
-      `amply.keySecret=${secret}`,
-      `# --- React Native (use this instead, in .env.local) ---`,
-      `# EXPO_PUBLIC_AMPLY_APP_ID=${appId}`,
-      `# EXPO_PUBLIC_AMPLY_KEY_PUBLIC=${publicKey}`,
-      `# EXPO_PUBLIC_AMPLY_KEY_SECRET=${secret}`,
+      `# Amply (Android). Do not commit.`,
+      `# RN (default — active):`,
+      `EXPO_PUBLIC_AMPLY_APP_ID=${appId}`,
+      `EXPO_PUBLIC_AMPLY_KEY_PUBLIC=${publicKey}`,
+      `EXPO_PUBLIC_AMPLY_KEY_SECRET=${secret}`,
+      `# Native Kotlin (uncomment in local.properties → BuildConfig field if you have a pure Kotlin project):`,
+      `# amply.appId=${appId}`,
+      `# amply.keyPublic=${publicKey}`,
+      `# amply.keySecret=${secret}`,
     ].join('\n');
   }
-  // Fallback — keep historical RN-flavoured output for any unknown platform.
+  // Fallback — historical RN-flavoured output for any unknown platform.
   return [
     `# Amply (${platform}). Do not commit.`,
     `EXPO_PUBLIC_AMPLY_APP_ID=${appId}`,

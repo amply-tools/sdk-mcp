@@ -104,7 +104,6 @@ export const CAMPAIGN = gql`
       name
       type
       state
-      project { id name }
       triggering
       targeting
       content

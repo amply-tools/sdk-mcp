@@ -68,7 +68,6 @@ interface CampaignResponse {
     name: string;
     type: string;
     state: string;
-    project: { id: string; name: string };
     triggering: unknown;
     targeting: unknown;
     content: unknown;
@@ -83,7 +82,6 @@ interface CampaignCreateResponse {
     name: string;
     type: string;
     state: string;
-    project: { id: string; name: string };
     createdAt: string;
   };
 }

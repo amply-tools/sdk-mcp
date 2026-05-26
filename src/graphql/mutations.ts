@@ -90,6 +90,11 @@ export const API_KEY_CREATE = gql`
  * targeting ([TargetingInput!]), triggering (TriggeringInput!).
  * Optional: state, project, content (JSON).
  */
+// NOTE: the backend's Campaign GraphQL type does not expose `project` as a
+// field (the relationship exists on the entity but is not annotated
+// `#[GQL\Field]`). Selecting `project { ... }` here raises
+// `Cannot query field "project" on type "Campaign"`. The caller already
+// knows projectId from the request input.
 export const CAMPAIGN_CREATE = gql`
   mutation CampaignCreate($input: CampaignInput!) {
     campaignCreate(input: $input) {
@@ -97,7 +102,6 @@ export const CAMPAIGN_CREATE = gql`
       name
       type
       state
-      project { id name }
       createdAt
     }
   }

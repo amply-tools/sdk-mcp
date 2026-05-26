@@ -210,7 +210,38 @@ function shrinkApp(a: { id: string; bundleId: string; name: string; platform: st
 
 interface EnvBlockArgs { appId: string; publicKey: string; secret: string; platform: string }
 
+// The MCP can't tell native iOS from RN-iOS (both register as `platform: 'iOS'`).
+// We emit the canonical block per platform with a one-line note pointing at the
+// RN-flavour variant when relevant. The caller (skill / agent) picks the form
+// that matches their project type detected in skill Phase 1.
 export function renderEnvBlock({ appId, publicKey, secret, platform }: EnvBlockArgs): string {
+  if (platform === 'iOS') {
+    return [
+      `# Amply (iOS). Do not commit. Choose the variant matching your project type.`,
+      `# --- Native Swift (xcconfig → Info.plist, or .env consumed by build phase) ---`,
+      `AMPLY_APP_ID=${appId}`,
+      `AMPLY_KEY_PUBLIC=${publicKey}`,
+      `AMPLY_KEY_SECRET=${secret}`,
+      `# --- React Native / Expo (use this instead, in .env.local) ---`,
+      `# EXPO_PUBLIC_AMPLY_APP_ID=${appId}`,
+      `# EXPO_PUBLIC_AMPLY_KEY_PUBLIC=${publicKey}`,
+      `# EXPO_PUBLIC_AMPLY_KEY_SECRET=${secret}`,
+    ].join('\n');
+  }
+  if (platform === 'Android') {
+    return [
+      `# Amply (Android). Do not commit. Choose the variant matching your project type.`,
+      `# --- Native Kotlin (local.properties + BuildConfig field) ---`,
+      `amply.appId=${appId}`,
+      `amply.keyPublic=${publicKey}`,
+      `amply.keySecret=${secret}`,
+      `# --- React Native (use this instead, in .env.local) ---`,
+      `# EXPO_PUBLIC_AMPLY_APP_ID=${appId}`,
+      `# EXPO_PUBLIC_AMPLY_KEY_PUBLIC=${publicKey}`,
+      `# EXPO_PUBLIC_AMPLY_KEY_SECRET=${secret}`,
+    ].join('\n');
+  }
+  // Fallback — keep historical RN-flavoured output for any unknown platform.
   return [
     `# Amply (${platform}). Do not commit.`,
     `EXPO_PUBLIC_AMPLY_APP_ID=${appId}`,

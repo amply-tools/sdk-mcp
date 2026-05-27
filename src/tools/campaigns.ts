@@ -162,7 +162,7 @@ export function makeSetCampaignStateTool() {
  * Triggering JSON conforms to backend's TriggeringInput:
  *   { event: EventInput, repeat: RepeatInput, limit: LimitInput }
  * EventInput:   { name: string, type: 'custom' | 'system', params: [] }
- * RepeatInput:  { repeatType: 'interval'|'every', repeatEntity: 'event'|'session', repeatValue: number|array }
+ * RepeatInput:  { repeatType: 'interval'|'every', repeatEntity: 'event'|'session', repeatValue: number[] }
  * LimitInput:   all-nullable optional fields (count/limit/limitType/interval/intervalDimension)
  *
  * For now we always create in Draft so the user must explicitly activate
@@ -184,11 +184,27 @@ const t3Params = z.object({
   deeplink: z.string().min(1),
 });
 
+// Values mirror the backend's `NumberCompareType` GraphQL enum exactly. The
+// short-form alternatives (eq / neq / gt / …) accepted by an earlier version
+// of this tool are gone; agents calling the tool must use the long form,
+// which matches the values the admin UI displays and what every other
+// GraphQL consumer (frontend) already uses.
+const compareTypeEnum = z.enum([
+  'equal',
+  'notEqual',
+  'greater',
+  'less',
+  'greaterOrEqual',
+  'lessOrEqual',
+  'isNotSet',
+  'isSet',
+]);
+
 const t4Params = z.object({
   event: z.string().min(1).describe('Event name that triggers evaluation.'),
   customPropertyKey: z.string().min(1).describe('Custom Property key to filter by, e.g. "subscription_status".'),
-  customPropertyValue: z.union([z.string(), z.number(), z.boolean()]).describe('Value to compare against.'),
-  customPropertyOp: z.enum(['eq', 'neq', 'gt', 'gte', 'lt', 'lte']).default('eq'),
+  customPropertyValue: z.union([z.string(), z.number(), z.boolean()]).describe('Value to compare against. Stringified before send (backend takes String).'),
+  customPropertyCompareType: compareTypeEnum.default('equal').describe('Comparison type — backend `NumberCompareType` enum.'),
   deeplink: z.string().min(1),
 });
 
@@ -221,7 +237,7 @@ function buildTemplate1(name: string, params: z.infer<typeof t1Params>): Campaig
     state: 'Draft',
     triggering: {
       event: { name: params.event, type: 'custom', params: [] },
-      repeat: { repeatType: 'every', repeatEntity: 'session', repeatValue: params.afterNthSession },
+      repeat: { repeatType: 'every', repeatEntity: 'session', repeatValue: [params.afterNthSession] },
       limit: {},
     },
     targeting: [],
@@ -236,11 +252,12 @@ function buildTemplate2(name: string, params: z.infer<typeof t2Params>): Campaig
     state: 'Draft',
     triggering: {
       event: { name: params.event, type: 'custom', params: [] },
-      repeat: { repeatType: 'every', repeatEntity: 'event', repeatValue: 1 },
+      repeat: { repeatType: 'every', repeatEntity: 'event', repeatValue: [1] },
       limit: {},
     },
     targeting: [],
-    content: { deeplink: params.deeplink },
+    // Backend ContentValidator expects `url`, not `deeplink`, for DeepLink content.
+    content: { url: params.deeplink },
   };
 }
 
@@ -252,11 +269,12 @@ function buildTemplate3(name: string, params: z.infer<typeof t3Params>): Campaig
     triggering: {
       // SDK constant: SystemEvents.SESSION_START = "SessionStarted" (events/Event.kt).
       event: { name: 'SessionStarted', type: 'system', params: [] },
-      repeat: { repeatType: 'every', repeatEntity: 'session', repeatValue: params.sessionNumber },
+      repeat: { repeatType: 'every', repeatEntity: 'session', repeatValue: [params.sessionNumber] },
       limit: {},
     },
     targeting: [],
-    content: { deeplink: params.deeplink },
+    // Backend ContentValidator expects `url`, not `deeplink`, for DeepLink content.
+    content: { url: params.deeplink },
   };
 }
 
@@ -267,19 +285,20 @@ function buildTemplate4(name: string, params: z.infer<typeof t4Params>): Campaig
     state: 'Draft',
     triggering: {
       event: { name: params.event, type: 'custom', params: [] },
-      repeat: { repeatType: 'every', repeatEntity: 'event', repeatValue: 1 },
+      repeat: { repeatType: 'every', repeatEntity: 'event', repeatValue: [1] },
       limit: {},
     },
     targeting: [
       {
-        customProperty: {
+        customProperty: buildCustomPropertyTargeting({
           key: params.customPropertyKey,
-          op: params.customPropertyOp,
+          compareType: params.customPropertyCompareType,
           value: params.customPropertyValue,
-        },
+        }),
       },
     ],
-    content: { deeplink: params.deeplink },
+    // Backend ContentValidator expects `url`, not `deeplink`, for DeepLink content.
+    content: { url: params.deeplink },
   };
 }
 
@@ -290,9 +309,13 @@ function buildTemplate5(name: string, params: z.infer<typeof t5Params>): Campaig
     state: 'Draft',
     triggering: {
       event: { name: params.positiveEvent, type: 'custom', params: [] },
-      repeat: { repeatType: 'every', repeatEntity: 'event', repeatValue: 1 },
+      repeat: { repeatType: 'every', repeatEntity: 'event', repeatValue: [1] },
+      // LimitValidator requires limit+limitType together and interval+
+      // intervalDimension together. `count` is a separate field with
+      // different semantics — for the "max 1 per device per N days" intent
+      // we want `limit`.
       limit: {
-        count: 1,
+        limit: 1,
         limitType: 'device',
         interval: params.intervalDays,
         intervalDimension: 'day',
@@ -300,15 +323,34 @@ function buildTemplate5(name: string, params: z.infer<typeof t5Params>): Campaig
     },
     targeting: [
       {
-        customProperty: {
+        customProperty: buildCustomPropertyTargeting({
           key: params.suppressionKey,
-          op: 'eq',
+          compareType: 'equal',
           value: params.suppressionValue,
-        },
+        }),
       },
     ],
-    content: { deeplink: params.deeplink },
+    // Backend ContentValidator expects `url`, not `deeplink`, for DeepLink content.
+    content: { url: params.deeplink },
   };
+}
+
+// Shared shape builder for CustomPropertyTargetingInput. The backend's
+// GraphQL input type is { key, compareType, value? } — value is optional
+// because `isSet` / `isNotSet` don't use it.
+function buildCustomPropertyTargeting(args: {
+  key: string;
+  compareType: z.infer<typeof compareTypeEnum>;
+  value: string | number | boolean;
+}): Record<string, unknown> {
+  const out: Record<string, unknown> = {
+    key: args.key,
+    compareType: args.compareType,
+  };
+  if (args.compareType !== 'isSet' && args.compareType !== 'isNotSet') {
+    out.value = String(args.value);
+  }
+  return out;
 }
 
 export function makeCreateCampaignFromTemplateTool() {

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AmplyClient } from '../graphql/client.js';
+import { AmplyClient, retryOnceOnNetworkError } from '../graphql/client.js';
 import { APPLICATION_CREATE } from '../graphql/mutations.js';
 import { APPLICATIONS, APPLICATION, PROJECTS } from '../graphql/queries.js';
 import { AmplyError } from '../errors.js';
@@ -59,7 +59,7 @@ export async function listAllProjects(client: AmplyClient): Promise<Array<{ id: 
   let after: string | null = null;
   // Hard cap pages to avoid runaway loops on a buggy backend.
   for (let i = 0; i < 100; i++) {
-    const data: ProjectsResponse = await client.request<ProjectsResponse>(PROJECTS, { first: 50, after });
+    const data: ProjectsResponse = await retryOnceOnNetworkError(() => client.request<ProjectsResponse>(PROJECTS, { first: 50, after }));
     out.push(...data.projects.edges.map((e) => e.node));
     if (!data.projects.pageInfo.hasNextPage) return out;
     after = data.projects.pageInfo.endCursor;
@@ -73,7 +73,7 @@ export async function listAllProjects(client: AmplyClient): Promise<Array<{ id: 
  * is an unpaginated array, so this is a single round-trip.
  */
 export async function listApplicationsInProject(client: AmplyClient, projectId: string): Promise<ApplicationNode[]> {
-  const data = await client.request<ApplicationsResponse>(APPLICATIONS, { projectId });
+  const data = await retryOnceOnNetworkError(() => client.request<ApplicationsResponse>(APPLICATIONS, { projectId }));
   return data.applications;
 }
 
@@ -108,7 +108,7 @@ export function makeListApplicationsTool() {
     async handler(input: z.infer<typeof listSchema>): Promise<CallToolResult> {
       return safe(async () => {
         const client = new AmplyClient();
-        const data = await client.request<ApplicationsResponse>(APPLICATIONS, { projectId: input.projectId });
+        const data = await retryOnceOnNetworkError(() => client.request<ApplicationsResponse>(APPLICATIONS, { projectId: input.projectId }));
         return ok({ applications: data.applications });
       });
     },
@@ -123,7 +123,7 @@ export function makeGetApplicationTool() {
     async handler(input: z.infer<typeof getSchema>): Promise<CallToolResult> {
       return safe(async () => {
         const client = new AmplyClient();
-        const data = await client.request<ApplicationResponse>(APPLICATION, { id: input.id });
+        const data = await retryOnceOnNetworkError(() => client.request<ApplicationResponse>(APPLICATION, { id: input.id }));
         if (!data.application) {
           throw new AmplyError('not_found', `No application with id ${input.id} (or access denied).`);
         }

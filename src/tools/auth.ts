@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AmplyClient } from '../graphql/client.js';
+import { AmplyClient, retryOnceOnNetworkError } from '../graphql/client.js';
 import { LOGIN, SIGNUP } from '../graphql/mutations.js';
 import { ME } from '../graphql/queries.js';
 import {
@@ -126,7 +126,7 @@ export function makeWhoamiTool() {
     async handler(): Promise<CallToolResult> {
       return safe(async () => {
         const client = new AmplyClient();
-        const data = await client.request<MeResponse>(ME);
+        const data = await retryOnceOnNetworkError(() => client.request<MeResponse>(ME));
         return ok({ user: data.me.user, organization: data.me.organization });
       });
     },

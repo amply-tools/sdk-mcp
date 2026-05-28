@@ -1,9 +1,10 @@
 import { z } from 'zod';
-import { AmplyClient } from '../graphql/client.js';
+import { AmplyClient, retryOnceOnNetworkError } from '../graphql/client.js';
 import { CAMPAIGNS, CAMPAIGN } from '../graphql/queries.js';
 import { CAMPAIGN_CREATE, CAMPAIGN_CHANGE_STATE } from '../graphql/mutations.js';
 import { AmplyError } from '../errors.js';
 import { ok, safe, type CallToolResult } from './_helpers.js';
+import { shapeGetCampaign, type RawCampaign } from '../campaigns/transform.js';
 
 /**
  * Campaign-management MCP tools. Designed conservatively — the only
@@ -62,19 +63,6 @@ interface CampaignsResponse {
   };
 }
 
-interface CampaignResponse {
-  campaign: {
-    id: string;
-    name: string;
-    type: string;
-    state: string;
-    triggering: unknown;
-    targeting: unknown;
-    content: unknown;
-    createdAt: string;
-    updatedAt: string;
-  } | null;
-}
 
 interface CampaignCreateResponse {
   campaignCreate: {
@@ -104,11 +92,11 @@ export function makeListCampaignsTool() {
     async handler(input: z.infer<typeof listSchema>): Promise<CallToolResult> {
       return safe(async () => {
         const client = new AmplyClient();
-        const data = await client.request<CampaignsResponse>(CAMPAIGNS, {
+        const data = await retryOnceOnNetworkError(() => client.request<CampaignsResponse>(CAMPAIGNS, {
           projectId: input.projectId,
           first: input.first ?? 50,
           after: input.after ?? null,
-        });
+        }));
         return ok({
           totalCount: data.campaigns.totalCount,
           campaigns: data.campaigns.edges.map((e) => e.node),
@@ -127,11 +115,9 @@ export function makeGetCampaignTool() {
     async handler(input: z.infer<typeof getSchema>): Promise<CallToolResult> {
       return safe(async () => {
         const client = new AmplyClient();
-        const data = await client.request<CampaignResponse>(CAMPAIGN, { id: input.id });
-        if (!data.campaign) {
-          throw new AmplyError('not_found', `No campaign with id ${input.id} (or access denied).`);
-        }
-        return ok({ campaign: data.campaign });
+        const data = await retryOnceOnNetworkError(() => client.request<{ campaign: RawCampaign | null }>(CAMPAIGN, { id: input.id }));
+        if (!data.campaign) throw new AmplyError('not_found', `No campaign with id ${input.id} (or access denied).`);
+        return ok({ campaign: shapeGetCampaign(data.campaign) });
       });
     },
   };

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AmplyClient } from '../graphql/client.js';
+import { AmplyClient, retryOnceOnNetworkError } from '../graphql/client.js';
 import { PROJECT_CREATE } from '../graphql/mutations.js';
 import { PROJECTS } from '../graphql/queries.js';
 import { ok, safe, type CallToolResult } from './_helpers.js';
@@ -31,7 +31,7 @@ export function makeListProjectsTool() {
       return safe(async () => {
         const client = new AmplyClient();
         const first = input.first ?? 50;
-        const data = await client.request<ProjectsResponse>(PROJECTS, { first });
+        const data = await retryOnceOnNetworkError(() => client.request<ProjectsResponse>(PROJECTS, { first }));
         return ok({
           totalCount: data.projects.totalCount,
           projects: data.projects.edges.map((e) => e.node),

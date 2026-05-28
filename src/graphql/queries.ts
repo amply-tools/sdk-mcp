@@ -105,10 +105,19 @@ export const CAMPAIGN = gql`
       type
       state
       triggering
-      targeting
       content
       createdAt
       updatedAt
+      targeting {
+        __typename
+        ... on OSVersionTargetingPayload { compareType value }
+        ... on AppVersionTargetingPayload { compareType value }
+        ... on AppInstallVersionTargetingPayload { compareType value }
+        ... on CountryTargetingPayload { type values }
+        ... on ApplicationTargetingPayload { type applications { id } }
+        ... on CustomPropertyTargetingPayload { key valueType compareType value dateValueType absoluteValue relativeValue dimension }
+        ... on InstallDateTargetingPayload { compareType valueType absoluteValue relativeValue dimension }
+      }
     }
   }
 `;

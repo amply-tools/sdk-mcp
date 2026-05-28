@@ -108,6 +108,17 @@ export const CAMPAIGN_CREATE = gql`
 `;
 
 /**
+ * campaignEdit(id: UUID!, input: CampaignInput!): Campaign — full replace.
+ * The backend keeps the existing project and defaults an omitted state to Draft,
+ * so callers MUST send the current state/type when not changing them.
+ */
+export const CAMPAIGN_EDIT = gql`
+  mutation CampaignEdit($id: UUID!, $input: CampaignInput!) {
+    campaignEdit(id: $id, input: $input) { id name type state updatedAt }
+  }
+`;
+
+/**
  * campaignChangeState(id: UUID!, input: CampaignStateInput!): Campaign
  * CampaignStateInput is just { state: CampaignState! }.
  */

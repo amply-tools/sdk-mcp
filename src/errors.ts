@@ -4,6 +4,8 @@
  */
 export type AmplyErrorCode =
   | 'auth_required'        // No cached creds, or refresh failed.
+  | 'auth_expired'         // Cached JWT expired (HTTP 401) — re-login needed.
+  | 'unsupported_targeting'// Campaign uses a targeting type the API can't render.
   | 'invalid_credentials'  // login / signup rejected by backend.
   | 'not_found'            // Project / Application / ApiKey doesn't exist or no access.
   | 'validation_error'     // Backend rejected input.
@@ -45,8 +47,20 @@ export function classifyGraphQLError(err: unknown): AmplyError {
   if (err instanceof AmplyError) return err;
 
   // graphql-request throws ClientError with .response.errors
-  const anyErr = err as { response?: { errors?: Array<{ message?: string; extensions?: Record<string, unknown> }> }; message?: string; code?: string; cause?: unknown };
+  const anyErr = err as { response?: { errors?: Array<{ message?: string; extensions?: Record<string, unknown> }>; status?: number }; message?: string; code?: string; cause?: unknown };
   const gqlErrors = anyErr?.response?.errors;
+
+  // graphql-request throws ClientError for non-2xx with the raw body in .response,
+  // so an expired JWT (HTTP 401) has NO response.errors and would otherwise fall
+  // through to internal_error. Catch it explicitly.
+  const httpStatus = (anyErr as { response?: { status?: number } })?.response?.status;
+  if (httpStatus === 401 || /expired jwt/i.test(anyErr?.message ?? '')) {
+    return new AmplyError('auth_expired', 'Session expired (HTTP 401).', {
+      hint: 'Run amply_login again — the cached session token expired.',
+      cause: err,
+    });
+  }
+
   if (gqlErrors && gqlErrors.length > 0) {
     const first = gqlErrors[0];
     const msg = first?.message ?? 'GraphQL error';

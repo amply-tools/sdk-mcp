@@ -125,6 +125,17 @@ export class AmplyClient {
   }
 }
 
+/** Run an idempotent read; retry exactly once if the first failure is a network_error. */
+export async function retryOnceOnNetworkError<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    const e = classifyGraphQLError(err);
+    if (e.code !== 'network_error') throw e;
+    return await fn();
+  }
+}
+
 function isAuthFailure(err: unknown): boolean {
   if (!(err instanceof AmplyError)) return false;
   if (err.code === 'auth_required') return true;

@@ -44,16 +44,12 @@ each tool handler before doing real work.
 
 ## 3. Cross-host MCP install commands not validated
 
-**Severity:** medium (publish blocker).
+~~**Severity:** medium (publish blocker).~~
 
-The README ships these commands:
-
-- Claude Code: `claude mcp add amply -- npx -y @amplytools/amply-mcp`
-- Codex CLI: `codex mcp add amply --command npx --args -y @amplytools/amply-mcp`
-
-Neither has been run on a clean machine against the published package. Before
-npm publish: verify both, plus at least one other host (Cursor / Windsurf), and
-update the README with corrections.
+**Resolved in 0.2.0.** Both install one-liners were verified against the
+published package on `codex-cli 0.128` and `claude-code`. The Codex CLI syntax
+was corrected to `codex mcp add amply -- npx -y @amplytools/amply-mcp`; the old
+`--command`/`--args` form was removed from the README.
 
 ## 4. Defaults to production endpoint without a tenant override
 

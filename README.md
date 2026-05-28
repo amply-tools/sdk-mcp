@@ -11,7 +11,7 @@ When an agent integrates the Amply SDK into a mobile app, the human still has to
 3. Register an application (bundleId + platform).
 4. Copy `appId` / `apiKeyPublic` / `apiKeySecret` from the admin UI into `.env.local`.
 
-This MCP eliminates steps 1–4. The agent calls `amply_bootstrap_for_app` and gets back the ready-to-paste env block.
+This MCP eliminates steps 1–4. The agent calls `amply_ensure_app` and gets back the ready-to-paste env block.
 
 ## Install
 
@@ -66,7 +66,15 @@ Endpoint can also be passed as `--endpoint <url>` to the binary.
 | `amply_get_application` | Fetches one application by UUID, including its API keys. |
 | `amply_create_application` | Registers a new app; returns the auto-generated first API key. |
 | `amply_create_api_key` | Issues an additional API key for an existing application. |
-| `amply_bootstrap_for_app` | One-shot: ensures project + application + first key. The recommended entry point for AI agents. |
+| `amply_ensure_app` | Idempotent project + application + API-key resolution. Returns `created` / `reused` / `reused_new_key` / `conflict_cross_project`. |
+| `amply_find_application` | Pure-read discovery; paginates every project in the organization when `projectId` is omitted. |
+| `amply_list_campaigns` | Lists campaigns for an application. |
+| `amply_get_campaign` | Fetches a single campaign by ID including triggering, targeting, and content. |
+| `amply_set_campaign_state` | Activate, pause, or archive a campaign. |
+| `amply_create_campaign_from_template` | Create a campaign from a curated template. Always Draft; activate explicitly. |
+| `amply_create_campaign` | Create a campaign from a full definition (event property filters, every-N repeat, device/customProperty targeting). Always Draft. |
+| `amply_update_campaign` | Edit a campaign in place; top-level replace; current state is preserved. |
+| `amply_describe_targeting` | Describe the targeting + triggering vocabulary (slots, comparators, predicate shapes). |
 
 Every tool returns a JSON body inside the MCP `content[0].text` block. On failure, `isError: true` is set and the JSON contains `{ error: { code, message, hint? } }` where `code` is one of: `auth_required`, `invalid_credentials`, `not_found`, `validation_error`, `conflict`, `access_denied`, `network_error`, `graphql_error`, `internal_error`.
 
@@ -83,9 +91,9 @@ Every tool returns a JSON body inside the MCP `content[0].text` block. On failur
 amply_status                              → { authenticated: false, ... }
 amply_signup({email, password, name, organization})
                                            → caches session
-amply_bootstrap_for_app({bundleId: "com.acme.app", name: "Acme", platform: "iOS",
-                         projectName: "Acme"})
-                                           → { application, firstApiKey: { public, secret }, envBlock }
+amply_ensure_app({bundleId: "com.acme.app", name: "Acme", platform: "iOS",
+                  projectName: "Acme"})
+                                           → { application, firstApiKey: { public, secret }, envBlock, status: "created" }
 ```
 
 The agent pastes `envBlock` into `.env.local` and is done.

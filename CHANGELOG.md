@@ -2,6 +2,23 @@
 
 All notable changes to `@amplytools/amply-mcp` are documented here. Versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] — 2026-05-28
+
+### Added
+- `amply_create_campaign` — author a campaign from a full definition: trigger event with property-filter `params`, every-N `repeat` cadence, and full device/customProperty `targeting` (appVersion, osVersion, country, application, customProperty, installDate). Always created in `Draft`.
+- `amply_update_campaign` — edit a campaign in place (top-level replace; current `state` preserved). Returns the full resulting config.
+- `amply_describe_targeting` — discover the targeting + triggering vocabulary without external docs.
+
+### Fixed
+- `amply_get_campaign` and `amply_create_campaign_from_template` selected a non-existent `Campaign.project` field and an un-sub-selected `targeting` union → both failed. Corrected; `get` now returns full `triggering`/`targeting`/`content`.
+- Expired session now returns `auth_expired` (was `internal_error`) with a re-login hint.
+
+### Changed
+- Idempotent read tools retry once on a transient network failure.
+
+### Removed
+- `amply_bootstrap_for_app` (deprecated since 0.2.0). Use `amply_ensure_app`.
+
 ## [0.2.2] — 2026-05-25
 
 ### Changed

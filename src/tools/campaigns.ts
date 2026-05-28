@@ -461,3 +461,33 @@ export function makeUpdateCampaignTool() {
     },
   };
 }
+
+export function makeDescribeTargetingTool() {
+  return {
+    name: 'amply_describe_targeting',
+    description: 'Describe the campaign targeting + triggering vocabulary (slots, comparators, event-property predicate shape) so it can be authored without external docs. Read-only, no network.',
+    inputSchema: z.object({}),
+    async handler(): Promise<CallToolResult> {
+      return ok({
+        targetingSlots: {
+          appVersion: { shape: '{ compareType, value }', valueExample: '"1.0.0"' },
+          osVersion: { shape: '{ compareType, value }' },
+          appInstallVersion: { shape: '{ compareType, value }' },
+          country: { shape: '{ type: include|exclude, values: [ISO country] }' },
+          application: { shape: '{ type: include|exclude, values: [applicationId UUID] }' },
+          customProperty: { shape: '{ key, compareType, valueType?, value?, dateValue? }' },
+          installDate: { shape: '{ compareType, value: { type: absolute|relative, absoluteValue?|relativeValue?+dimension } }' },
+        },
+        note: 'Each targeting array item sets EXACTLY ONE slot. Multiple items AND together.',
+        numberCompareType: ['equal','notEqual','greater','less','greaterOrEqual','lessOrEqual','isNotSet','isSet'],
+        triggering: {
+          event: '{ name, type: custom|system, params: [{ name, value, compareType="===", valueType="string" }] }',
+          repeat: '{ repeatType: every|interval, repeatEntity: event|session, repeatValue: number[] }',
+          repeatExample: 'every 2nd matching event = { repeatType:"every", repeatEntity:"event", repeatValue:[2] } (repeatValue MUST be an array of ints)',
+          limit: '{ count?, limit?, limitType?: session|device, interval?, intervalDimension?: sec|min|hour|day }',
+        },
+        content: { DeepLink: 'requires { url: "<deeplink>" }', RateReview: 'must be null/omitted' },
+      });
+    },
+  };
+}

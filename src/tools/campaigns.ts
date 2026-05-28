@@ -56,6 +56,17 @@ const createSchema = z.object({
   content: campaignInputShape.shape.content,
 });
 
+const updateSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1).optional(),
+  state: z.enum(['Draft', 'Active', 'Cancel']).optional(),
+  type: z.enum(['DeepLink', 'RateReview']).optional(),
+  triggering: campaignInputShape.shape.triggering.optional(),
+  targeting: campaignInputShape.shape.targeting.optional(),
+  content: campaignInputShape.shape.content,
+  expectedUpdatedAt: z.string().optional(),
+});
+
 interface CampaignsResponse {
   campaigns: {
     totalCount: number;
@@ -416,6 +427,36 @@ export function makeCreateCampaignTool() {
         const payload = buildCreateInput(input.projectId, input.name, { type: input.type, triggering: input.triggering, targeting: input.targeting, content: input.content });
         const data = await client.request<CampaignCreateResponse>(CAMPAIGN_CREATE, { input: payload });
         return ok({ campaign: data.campaignCreate });
+      });
+    },
+  };
+}
+
+export function makeUpdateCampaignTool() {
+  return {
+    name: 'amply_update_campaign',
+    description: 'Edit an existing campaign in place. TOP-LEVEL REPLACE: any field you provide (name/state/type/triggering/targeting/content) replaces that field wholesale; a provided `targeting` array REPLACES ALL targeting rules. Omitted fields keep their current value (current state is preserved — an edit never silently deactivates a live campaign). Returns the full resulting config.',
+    inputSchema: updateSchema,
+    async handler(input: z.infer<typeof updateSchema>): Promise<CallToolResult> {
+      return safe(async () => {
+        const client = new AmplyClient();
+        // Read current (round-trippable shape). Throws unsupported_targeting if unreadable.
+        const cur = await retryOnceOnNetworkError(() => client.request<{ campaign: RawCampaign | null }>(CAMPAIGN, { id: input.id }));
+        if (!cur.campaign) throw new AmplyError('not_found', `No campaign with id ${input.id} (or access denied).`);
+        const current = shapeGetCampaign(cur.campaign);
+        if (input.expectedUpdatedAt && current.updatedAt && current.updatedAt !== input.expectedUpdatedAt) {
+          throw new AmplyError('conflict', `Campaign changed since you read it (updatedAt ${current.updatedAt}).`, { hint: 'Re-read with amply_get_campaign and retry.' });
+        }
+        const merged = mergeUpdateInput(current, {
+          name: input.name, state: input.state, type: input.type,
+          triggering: input.triggering, targeting: input.targeting,
+          content: input.content,
+        });
+        // Never replay unvalidated backend JSON: re-validate the writable fields.
+        const validated = validateWriteInput(merged);
+        await client.request(CAMPAIGN_EDIT, { id: input.id, input: { name: merged.name, state: merged.state, ...validated } });
+        const after = await retryOnceOnNetworkError(() => client.request<{ campaign: RawCampaign | null }>(CAMPAIGN, { id: input.id }));
+        return ok({ campaign: after.campaign ? shapeGetCampaign(after.campaign) : null });
       });
     },
   };

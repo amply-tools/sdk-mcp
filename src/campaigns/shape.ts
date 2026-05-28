@@ -1,3 +1,21 @@
+/**
+ * Canonical Zod schema for a campaign's WRITABLE fields:
+ * `type`, `triggering`, `targeting`, `content`.
+ *
+ * Note on what's intentionally NOT in this shape:
+ *  - `name`, `state`, `project` — injected by the create/update tool wrappers
+ *    (`buildCreateInput(projectId, name, args)`, `mergeUpdateInput(current, patch)`
+ *    in `transform.ts`). Keeping them out keeps the shape focused on the parts
+ *    that round-trip between read (`shapeGetCampaign`) and write.
+ *  - `eventParam.compareType` / `valueType` — left as open `z.string()` because
+ *    the backend `EventParamInput` carries defaults (`'==='` / `'string'`) and
+ *    has no published enum at the GraphQL layer.
+ *
+ * Cross-field validation (e.g. `dateValue.type === 'absolute'` implies
+ * `absoluteValue` is set) is enforced server-side by the backend's
+ * `CampaignValidatorCollection`. Adding client-side discriminated refines is
+ * a deferred polish item.
+ */
 import { z } from 'zod';
 
 export const numberCompareType = z.enum(['equal','notEqual','greater','less','greaterOrEqual','lessOrEqual','isNotSet','isSet']);

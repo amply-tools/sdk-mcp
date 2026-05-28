@@ -216,7 +216,7 @@ const t5Params = z.object({
   deeplink: z.string().min(1).describe('Deeplink URL to fire, e.g. "app://refer-friend".'),
 });
 
-interface CampaignInputShape {
+interface LegacyTemplateInput {
   name: string;
   type: 'RateReview' | 'DeepLink';
   state: 'Draft' | 'Active' | 'Cancel';
@@ -230,7 +230,7 @@ interface CampaignInputShape {
   content?: Record<string, unknown> | null;
 }
 
-function buildTemplate1(name: string, params: z.infer<typeof t1Params>): CampaignInputShape {
+function buildTemplate1(name: string, params: z.infer<typeof t1Params>): LegacyTemplateInput {
   return {
     name,
     type: 'RateReview',
@@ -245,7 +245,7 @@ function buildTemplate1(name: string, params: z.infer<typeof t1Params>): Campaig
   };
 }
 
-function buildTemplate2(name: string, params: z.infer<typeof t2Params>): CampaignInputShape {
+function buildTemplate2(name: string, params: z.infer<typeof t2Params>): LegacyTemplateInput {
   return {
     name,
     type: 'DeepLink',
@@ -261,7 +261,7 @@ function buildTemplate2(name: string, params: z.infer<typeof t2Params>): Campaig
   };
 }
 
-function buildTemplate3(name: string, params: z.infer<typeof t3Params>): CampaignInputShape {
+function buildTemplate3(name: string, params: z.infer<typeof t3Params>): LegacyTemplateInput {
   return {
     name,
     type: 'DeepLink',
@@ -278,7 +278,7 @@ function buildTemplate3(name: string, params: z.infer<typeof t3Params>): Campaig
   };
 }
 
-function buildTemplate4(name: string, params: z.infer<typeof t4Params>): CampaignInputShape {
+function buildTemplate4(name: string, params: z.infer<typeof t4Params>): LegacyTemplateInput {
   return {
     name,
     type: 'DeepLink',
@@ -302,7 +302,7 @@ function buildTemplate4(name: string, params: z.infer<typeof t4Params>): Campaig
   };
 }
 
-function buildTemplate5(name: string, params: z.infer<typeof t5Params>): CampaignInputShape {
+function buildTemplate5(name: string, params: z.infer<typeof t5Params>): LegacyTemplateInput {
   return {
     name,
     type: 'DeepLink',
@@ -369,7 +369,7 @@ export function makeCreateCampaignFromTemplateTool() {
             `Template produced campaign type "${built.type}"; only RateReview and DeepLink are allowed.`,
           );
         }
-        const payload: CampaignInputShape & { project: string } = {
+        const payload: LegacyTemplateInput & { project: string } = {
           ...built,
           project: input.projectId,
         };
@@ -384,7 +384,7 @@ function buildCampaignFromTemplate(
   name: string,
   templateKey: z.infer<typeof templateKeyEnum>,
   params: Record<string, unknown>,
-): CampaignInputShape {
+): LegacyTemplateInput {
   switch (templateKey) {
     case 'rate-review-after-positive-moment': {
       const v = t1Params.parse(params);

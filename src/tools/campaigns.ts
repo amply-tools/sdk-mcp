@@ -1,10 +1,11 @@
 import { z } from 'zod';
 import { AmplyClient, retryOnceOnNetworkError } from '../graphql/client.js';
 import { CAMPAIGNS, CAMPAIGN } from '../graphql/queries.js';
-import { CAMPAIGN_CREATE, CAMPAIGN_CHANGE_STATE } from '../graphql/mutations.js';
+import { CAMPAIGN_CREATE, CAMPAIGN_CHANGE_STATE, CAMPAIGN_EDIT } from '../graphql/mutations.js';
 import { AmplyError } from '../errors.js';
 import { ok, safe, type CallToolResult } from './_helpers.js';
-import { shapeGetCampaign, type RawCampaign } from '../campaigns/transform.js';
+import { campaignInputShape } from '../campaigns/shape.js';
+import { buildCreateInput, shapeGetCampaign, mergeUpdateInput, validateWriteInput, type RawCampaign } from '../campaigns/transform.js';
 
 /**
  * Campaign-management MCP tools. Designed conservatively — the only
@@ -44,6 +45,15 @@ const createFromTemplateSchema = z.object({
   name: z.string().min(1).describe('Display name for the campaign.'),
   templateKey: templateKeyEnum,
   params: z.record(z.unknown()).describe('Template-specific params. See per-template docs.'),
+});
+
+const createSchema = z.object({
+  projectId: z.string().uuid(),
+  name: z.string().min(1),
+  type: z.enum(['DeepLink', 'RateReview']),
+  triggering: campaignInputShape.shape.triggering,
+  targeting: campaignInputShape.shape.targeting,
+  content: campaignInputShape.shape.content,
 });
 
 interface CampaignsResponse {
@@ -393,4 +403,20 @@ function buildCampaignFromTemplate(
       return buildTemplate5(name, v);
     }
   }
+}
+
+export function makeCreateCampaignTool() {
+  return {
+    name: 'amply_create_campaign',
+    description: 'Create a campaign from a full definition (trigger event + optional property-filter params, every-N repeat cadence, device/customProperty targeting, deeplink content). ALWAYS created in Draft — activate via amply_set_campaign_state. Use amply_describe_targeting to learn the targeting vocabulary.',
+    inputSchema: createSchema,
+    async handler(input: z.infer<typeof createSchema>): Promise<CallToolResult> {
+      return safe(async () => {
+        const client = new AmplyClient();
+        const payload = buildCreateInput(input.projectId, input.name, { type: input.type, triggering: input.triggering, targeting: input.targeting, content: input.content });
+        const data = await client.request<CampaignCreateResponse>(CAMPAIGN_CREATE, { input: payload });
+        return ok({ campaign: data.campaignCreate });
+      });
+    },
+  };
 }

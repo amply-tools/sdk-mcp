@@ -13,7 +13,7 @@ test('expired JWT (HTTP 401 ClientError, no errors[]) -> auth_expired', () => {
   assert.match(e.hint ?? '', /amply_login/);
 });
 
-test('unsupported_targeting is a constructable code', () => {
+test('unsupported_targeting code is valid (type smoke)', () => {
   const e = new AmplyError('unsupported_targeting', 'x');
   assert.equal(e.code, 'unsupported_targeting');
 });

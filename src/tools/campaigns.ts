@@ -387,7 +387,7 @@ export function makeCreateCampaignFromTemplateTool() {
   };
 }
 
-function buildCampaignFromTemplate(
+export function buildCampaignFromTemplate(
   name: string,
   templateKey: z.infer<typeof templateKeyEnum>,
   params: Record<string, unknown>,

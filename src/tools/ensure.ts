@@ -46,7 +46,7 @@ export function makeEnsureAppTool() {
   return {
     name: 'amply_ensure_app',
     description:
-      'Idempotent project + application + key resolution. Finds-or-creates a project (sorted deterministically when many exist), discovers any existing application by bundleId+platform, and decides whether to reuse, mint a new key for the reused app, create fresh, or fail with a cross-project conflict. Returns a structured `status` (`created`, `reused`, `reused_new_key`, `conflict_cross_project`) plus an `envBlock` ready to paste into a .env file. Prefer this over amply_bootstrap_for_app.',
+      'Idempotent project + application + key resolution. Finds-or-creates a project (sorted deterministically when many exist), discovers any existing application by bundleId+platform, and decides whether to reuse, mint a new key for the reused app, create fresh, or fail with a cross-project conflict. Returns a structured `status` (`created`, `reused`, `reused_new_key`, `conflict_cross_project`) plus an `envBlock` ready to paste into a .env file.',
     inputSchema: ensureSchema,
     async handler(input: EnsureAppInput): Promise<CallToolResult> {
       return safe(async () => {

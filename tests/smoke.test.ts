@@ -87,12 +87,24 @@ test('mcp boots, advertises tools, amply_status works without creds', async () =
     'amply_create_project',
     'amply_list_applications',
     'amply_get_application',
+    'amply_find_application',
     'amply_create_application',
     'amply_create_api_key',
-    'amply_bootstrap_for_app',
+    'amply_ensure_app',
+    'amply_list_campaigns',
+    'amply_get_campaign',
+    'amply_set_campaign_state',
+    'amply_create_campaign_from_template',
+    'amply_create_campaign',
+    'amply_update_campaign',
+    'amply_describe_targeting',
   ];
+  const absentTools = ['amply_bootstrap_for_app'];
   for (const name of expectedTools) {
     assert.ok(tools.some((t) => t.name === name), `missing tool: ${name}`);
+  }
+  for (const name of absentTools) {
+    assert.ok(!tools.some((t) => t.name === name), `tool should be removed: ${name}`);
   }
 
   const statusResp = responses.find((r) => (r as { id?: number }).id === 3);

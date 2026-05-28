@@ -19,13 +19,15 @@ import {
   makeListApplicationsTool,
 } from './tools/applications.js';
 import { makeCreateApiKeyTool } from './tools/apiKeys.js';
-import { makeBootstrapForAppTool } from './tools/bootstrap.js';
 import { makeEnsureAppTool } from './tools/ensure.js';
 import {
   makeCreateCampaignFromTemplateTool,
+  makeCreateCampaignTool,
+  makeDescribeTargetingTool,
   makeGetCampaignTool,
   makeListCampaignsTool,
   makeSetCampaignStateTool,
+  makeUpdateCampaignTool,
 } from './tools/campaigns.js';
 import { safeLog } from './tools/_helpers.js';
 
@@ -73,11 +75,13 @@ function allTools() {
     makeCreateApplicationTool(),
     makeCreateApiKeyTool(),
     makeEnsureAppTool(),
-    makeBootstrapForAppTool(),
     makeListCampaignsTool(),
     makeGetCampaignTool(),
     makeSetCampaignStateTool(),
     makeCreateCampaignFromTemplateTool(),
+    makeCreateCampaignTool(),
+    makeUpdateCampaignTool(),
+    makeDescribeTargetingTool(),
   ];
 }
 

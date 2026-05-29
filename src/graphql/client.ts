@@ -136,9 +136,14 @@ export async function retryOnceOnNetworkError<T>(fn: () => Promise<T>): Promise<
   }
 }
 
-function isAuthFailure(err: unknown): boolean {
+export function isAuthFailure(err: unknown): boolean {
   if (!(err instanceof AmplyError)) return false;
   if (err.code === 'auth_required') return true;
+  // A genuinely expired access token surfaces as HTTP 401 (no GraphQL body) and is
+  // classified `auth_expired`. That is the PRIMARY case the refresh-token exists for,
+  // so it must trigger the silent refresh — otherwise every token expiry forces a
+  // password re-login despite a valid refresh token on disk.
+  if (err.code === 'auth_expired') return true;
   if (err.code === 'graphql_error' && /jwt|expired|invalid token|unauthor/i.test(err.message)) {
     return true;
   }

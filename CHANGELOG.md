@@ -2,6 +2,11 @@
 
 All notable changes to `@amplytools/amply-mcp` are documented here. Versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] — 2026-05-29
+
+### Fixed
+- Expired access token no longer forces a password re-login when a valid refresh token is on disk. A genuinely expired JWT comes back as HTTP 401 (no GraphQL body) and was classified `auth_expired`, but the silent-refresh trigger only recognized `auth_required` / jwt-text `graphql_error` — so the one case the refresh token exists for never triggered it. `auth_expired` now drives the same single refresh-and-retry. Added a regression test.
+
 ## [0.3.1] — 2026-05-29
 
 ### Fixed

@@ -115,8 +115,8 @@ export const CAMPAIGN = gql`
         ... on AppInstallVersionTargetingPayload { compareType value }
         ... on CountryTargetingPayload { type values }
         ... on ApplicationTargetingPayload { type applications { id } }
-        ... on CustomPropertyTargetingPayload { key valueType compareType value dateValueType absoluteValue relativeValue dimension }
-        ... on InstallDateTargetingPayload { compareType valueType absoluteValue relativeValue dimension }
+        ... on CustomPropertyTargetingPayload { key customPropertyValueType: valueType compareType customPropertyValue: value dateValueType absoluteValue relativeValue dimension }
+        ... on InstallDateTargetingPayload { compareType installDateValueType: valueType absoluteValue relativeValue dimension }
       }
     }
   }

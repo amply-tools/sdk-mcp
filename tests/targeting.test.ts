@@ -15,12 +15,14 @@ test('application payload extracts ids into values', () => {
 });
 
 test('customProperty with relative date nests dateValue and drops nulls', () => {
-  const out = targetingPayloadToInput([{ __typename: 'CustomPropertyTargetingPayload', key: 'plan', compareType: 'equal', valueType: 'string', value: 'pro', dateValueType: null, absoluteValue: null, relativeValue: null, dimension: null }]);
+  // The GraphQL layer aliases the conflicting union fields, so the raw payload
+  // arrives with `customPropertyValueType` / `customPropertyValue` (see queries.ts).
+  const out = targetingPayloadToInput([{ __typename: 'CustomPropertyTargetingPayload', key: 'plan', compareType: 'equal', customPropertyValueType: 'string', customPropertyValue: 'pro', dateValueType: null, absoluteValue: null, relativeValue: null, dimension: null }]);
   assert.deepEqual(out, [{ customProperty: { key: 'plan', compareType: 'equal', valueType: 'string', value: 'pro' } }]);
 });
 
 test('installDate payload nests value', () => {
-  const out = targetingPayloadToInput([{ __typename: 'InstallDateTargetingPayload', compareType: 'greater', valueType: 'relative', absoluteValue: null, relativeValue: 7, dimension: 'days' }]);
+  const out = targetingPayloadToInput([{ __typename: 'InstallDateTargetingPayload', compareType: 'greater', installDateValueType: 'relative', absoluteValue: null, relativeValue: 7, dimension: 'days' }]);
   assert.deepEqual(out, [{ installDate: { compareType: 'greater', value: { type: 'relative', relativeValue: 7, dimension: 'days' } } }]);
 });
 

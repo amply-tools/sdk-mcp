@@ -23,14 +23,14 @@ export function targetingPayloadToInput(payloads: RawTargetingPayload[] | null |
       case 'ApplicationTargetingPayload':
         return { application: { type: p.type, values: ((p.applications as Array<{ id: string }>) ?? []).map((a) => a.id) } };
       case 'CustomPropertyTargetingPayload': {
-        const cp = pruneNullish({ key: p.key, compareType: p.compareType, valueType: p.valueType, value: p.value });
+        const cp = pruneNullish({ key: p.key, compareType: p.compareType, valueType: p.customPropertyValueType, value: p.customPropertyValue });
         if (p.dateValueType != null) {
           cp.dateValue = pruneNullish({ type: p.dateValueType, absoluteValue: p.absoluteValue, relativeValue: p.relativeValue, dimension: p.dimension });
         }
         return { customProperty: cp };
       }
       case 'InstallDateTargetingPayload':
-        return { installDate: { compareType: p.compareType, value: pruneNullish({ type: p.valueType, absoluteValue: p.absoluteValue, relativeValue: p.relativeValue, dimension: p.dimension }) } };
+        return { installDate: { compareType: p.compareType, value: pruneNullish({ type: p.installDateValueType, absoluteValue: p.absoluteValue, relativeValue: p.relativeValue, dimension: p.dimension }) } };
       default:
         throw new AmplyError('unsupported_targeting', `Campaign uses a targeting type this API can't render: ${p.__typename}`, {
           hint: 'Edit it in the Amply dashboard; the MCP cannot round-trip this targeting type.',

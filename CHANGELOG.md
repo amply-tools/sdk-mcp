@@ -2,6 +2,11 @@
 
 All notable changes to `@amplytools/amply-mcp` are documented here. Versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] — 2026-05-29
+
+### Fixed
+- `amply_get_campaign` and `amply_update_campaign` failed for any campaign with a `customProperty` or `installDate` targeting rule (and `update` reads first, so it failed too). The campaign query selected `value` and `valueType` raw across the `targeting` union, where `value` is `String!` on the version payloads but `String` on `customProperty`, and `valueType` differs between `customProperty` and `installDate` — a GraphQL `FieldsInSetCanMerge` violation that rejected the whole query. The conflicting fields are now aliased (`customPropertyValue`, `customPropertyValueType`, `installDateValueType`), matching the admin dashboard's own selection. Added a regression test pinning the aliases.
+
 ## [0.3.0] — 2026-05-28
 
 ### Added

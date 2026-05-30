@@ -2,7 +2,10 @@
 
 All notable changes to `@amplytools/amply-mcp` are documented here. Versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.2] — 2026-05-29
+## [Unreleased]
+
+### Added
+- `amply_create_campaign_from_template` gains a 6th template, `deeplink-on-property-change`. It fires a DeepLink campaign on the SDK's `CustomPropertyChanged` system event, filtering on the event payload's `key` + `newValue` (and optional `oldValue`) via Event Param filters. Params: `propertyKey`, `newValue`, optional `oldValue`, `deeplink`. Always created in Draft. Covers post-upgrade welcome / trial-expired recovery / plan-tier-change deeplinks without the app firing redundant `*_changed` custom events. Event-param `valueType` is pinned to `'string'` (values stringified) to match the documented `EventParamInput` contract rather than relying on backend type coercion.
 
 ### Fixed
 - Expired access token no longer forces a password re-login when a valid refresh token is on disk. A genuinely expired JWT comes back as HTTP 401 (no GraphQL body) and was classified `auth_expired`, but the silent-refresh trigger only recognized `auth_required` / jwt-text `graphql_error` — so the one case the refresh token exists for never triggered it. `auth_expired` now drives the same single refresh-and-retry. Added a regression test.

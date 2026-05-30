@@ -5,6 +5,7 @@ import {
   makeGetCampaignTool,
   makeSetCampaignStateTool,
   makeCreateCampaignFromTemplateTool,
+  buildCampaignFromTemplate,
 } from '../src/tools/campaigns.js';
 
 test('amply_list_campaigns — metadata + schema', () => {
@@ -60,7 +61,7 @@ test('amply_create_campaign_from_template — accepts deeplink-on-session-n', ()
   assert.equal(r.success, true);
 });
 
-test('amply_create_campaign_from_template — accepts all 5 templates', () => {
+test('amply_create_campaign_from_template — accepts all 6 templates', () => {
   const t = makeCreateCampaignFromTemplateTool();
   const cases: Array<[string, Record<string, unknown>]> = [
     ['rate-review-after-positive-moment', { event: 'PurchaseCompleted' }],
@@ -68,6 +69,7 @@ test('amply_create_campaign_from_template — accepts all 5 templates', () => {
     ['deeplink-on-session-n', { sessionNumber: 5, deeplink: 'app://x' }],
     ['deeplink-on-custom-property', { event: 'SessionStart', customPropertyKey: 'is_premium', customPropertyValue: true, deeplink: 'app://x' }],
     ['deeplink-after-positive-event-with-suppression', { positiveEvent: 'LevelComplete', suppressionKey: 'already_invited', deeplink: 'app://x' }],
+    ['deeplink-on-property-change', { propertyKey: 'subscription_status', newValue: 'expired', deeplink: 'app://x' }],
   ];
   for (const [key, params] of cases) {
     const r = t.inputSchema.safeParse({
@@ -78,4 +80,43 @@ test('amply_create_campaign_from_template — accepts all 5 templates', () => {
     });
     assert.equal(r.success, true, `template ${key} should validate at the outer schema`);
   }
+});
+
+test('deeplink-on-property-change — builds the CustomPropertyChanged trigger shape', () => {
+  const built = buildCampaignFromTemplate('Trial expired recovery', 'deeplink-on-property-change', {
+    propertyKey: 'subscription_status',
+    newValue: 'expired',
+    oldValue: 'trial',
+    deeplink: 'app://recover',
+  });
+
+  assert.equal(built.type, 'DeepLink');
+  assert.equal(built.state, 'Draft');
+  // Triggers off the SDK system event, not a custom app event.
+  assert.equal(built.triggering.event.name, 'CustomPropertyChanged');
+  assert.equal(built.triggering.event.type, 'system');
+  // Event-param filters: key + newValue + oldValue, using the '===' operator.
+  assert.deepEqual(built.triggering.event.params, [
+    { name: 'key', value: 'subscription_status', compareType: '===', valueType: 'string' },
+    { name: 'newValue', value: 'expired', compareType: '===', valueType: 'string' },
+    { name: 'oldValue', value: 'trial', compareType: '===', valueType: 'string' },
+  ]);
+  // Backend ContentValidator expects `url`, not `deeplink`.
+  assert.deepEqual(built.content, { url: 'app://recover' });
+  // No device/customProperty targeting — the trigger itself carries the filter.
+  assert.deepEqual(built.targeting, []);
+});
+
+test('deeplink-on-property-change — omits oldValue param when not supplied; stringifies non-string values', () => {
+  const built = buildCampaignFromTemplate('Upgraded welcome', 'deeplink-on-property-change', {
+    propertyKey: 'total_purchases',
+    newValue: 5,
+    deeplink: 'app://welcome',
+  });
+  // Non-string values are stringified; valueType stays 'string' to match the
+  // documented eventParam contract (no dependency on backend type coercion).
+  assert.deepEqual(built.triggering.event.params, [
+    { name: 'key', value: 'total_purchases', compareType: '===', valueType: 'string' },
+    { name: 'newValue', value: '5', compareType: '===', valueType: 'string' },
+  ]);
 });

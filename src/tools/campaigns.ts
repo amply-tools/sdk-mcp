@@ -38,6 +38,7 @@ const templateKeyEnum = z.enum([
   'deeplink-on-session-n',
   'deeplink-on-custom-property',
   'deeplink-after-positive-event-with-suppression',
+  'deeplink-on-property-change',
 ]);
 
 const createFromTemplateSchema = z.object({
@@ -168,7 +169,8 @@ export function makeSetCampaignStateTool() {
  *
  * Triggering JSON conforms to backend's TriggeringInput:
  *   { event: EventInput, repeat: RepeatInput, limit: LimitInput }
- * EventInput:   { name: string, type: 'custom' | 'system', params: [] }
+ * EventInput:   { name: string, type: 'custom' | 'system', params: EventParamInput[] }
+ * EventParam:   { name: string, value: string, compareType: string ('==='), valueType: string ('string'|'number'|'boolean') }
  * RepeatInput:  { repeatType: 'interval'|'every', repeatEntity: 'event'|'session', repeatValue: number[] }
  * LimitInput:   all-nullable optional fields (count/limit/limitType/interval/intervalDimension)
  *
@@ -223,13 +225,32 @@ const t5Params = z.object({
   deeplink: z.string().min(1).describe('Deeplink URL to fire, e.g. "app://refer-friend".'),
 });
 
+const t6Params = z.object({
+  propertyKey: z.string().min(1).describe('Custom Property key that changed, e.g. "subscription_status". Matched against the CustomPropertyChanged system event\'s "key" payload field.'),
+  newValue: z.union([z.string(), z.number(), z.boolean()]).describe('The value the property changed TO, e.g. "expired". Matched against the event\'s "newValue".'),
+  oldValue: z.union([z.string(), z.number(), z.boolean()]).optional().describe('Optional: the value the property changed FROM, for "X → Y" semantics. When set, matched against the event\'s "oldValue".'),
+  deeplink: z.string().min(1).describe('Deeplink URL to fire when the change matches, e.g. "app://welcome-upgraded".'),
+});
+
+// Mirrors the backend `EventParamInput` shape (see `../campaigns/shape.ts` →
+// `eventParam`): the equality operator is the literal `'==='` (not the
+// targeting-side `NumberCompareType` enum), and `valueType` defaults to
+// `'string'`. Only templates that filter a system/custom event by its payload
+// populate this; the others pass `[]`.
+interface TemplateEventParam {
+  name: string;
+  value: string;
+  compareType: string;
+  valueType: string;
+}
+
 interface LegacyTemplateInput {
   name: string;
   type: 'RateReview' | 'DeepLink';
   state: 'Draft' | 'Active' | 'Cancel';
   project?: string;
   triggering: {
-    event: { name: string; type: 'custom' | 'system'; params: [] };
+    event: { name: string; type: 'custom' | 'system'; params: TemplateEventParam[] };
     repeat: { repeatType: 'interval' | 'every'; repeatEntity: 'event' | 'session'; repeatValue: number | number[] };
     limit: Record<string, unknown>;
   };
@@ -342,6 +363,46 @@ function buildTemplate5(name: string, params: z.infer<typeof t5Params>): LegacyT
   };
 }
 
+// Build a single trigger-event param filter. The backend `EventParamInput`
+// carries `value` as a String, with `compareType` defaulting to the event-param
+// equality operator `'==='` (distinct from the targeting-side `NumberCompareType`
+// enum used by buildCustomPropertyTargeting) and `valueType` defaulting to
+// `'string'`. We stringify the value and pin `valueType: 'string'` to match the
+// documented `eventParam` contract (shape.ts) and `amply_describe_targeting`
+// exactly — rather than reflecting the JS primitive, which would depend on
+// undocumented backend coercion semantics and risk a silent non-match.
+function buildEventParam(name: string, value: string | number | boolean): TemplateEventParam {
+  return { name, value: String(value), compareType: '===', valueType: 'string' };
+}
+
+function buildTemplate6(name: string, params: z.infer<typeof t6Params>): LegacyTemplateInput {
+  // SDK constant: SystemEvents.CUSTOM_PROPERTY_CHANGED = "CustomPropertyChanged"
+  // (events/Event.kt). Auto-fired when a custom property is set/updated/removed;
+  // the event payload carries { key, oldValue?, newValue?, timestamp }. We filter
+  // on `key` + `newValue` (and `oldValue` when supplied) so the campaign fires
+  // only on the specific transition the caller asked for.
+  const eventParams: TemplateEventParam[] = [
+    buildEventParam('key', params.propertyKey),
+    buildEventParam('newValue', params.newValue),
+  ];
+  if (params.oldValue !== undefined) {
+    eventParams.push(buildEventParam('oldValue', params.oldValue));
+  }
+  return {
+    name,
+    type: 'DeepLink',
+    state: 'Draft',
+    triggering: {
+      event: { name: 'CustomPropertyChanged', type: 'system', params: eventParams },
+      repeat: { repeatType: 'every', repeatEntity: 'event', repeatValue: [1] },
+      limit: {},
+    },
+    targeting: [],
+    // Backend ContentValidator expects `url`, not `deeplink`, for DeepLink content.
+    content: { url: params.deeplink },
+  };
+}
+
 // Shared shape builder for CustomPropertyTargetingInput. The backend's
 // GraphQL input type is { key, compareType, value? } — value is optional
 // because `isSet` / `isNotSet` don't use it.
@@ -363,7 +424,7 @@ function buildCustomPropertyTargeting(args: {
 export function makeCreateCampaignFromTemplateTool() {
   return {
     name: 'amply_create_campaign_from_template',
-    description: 'Create a campaign in Draft state from one of 5 whitelisted templates. Each template enforces a known-good triggering+targeting shape; arbitrary campaign authoring is intentionally not exposed yet. Always creates in Draft — activate via amply_set_campaign_state when ready. Templates: rate-review-after-positive-moment, deeplink-on-feature-discovery, deeplink-on-session-n, deeplink-on-custom-property, deeplink-after-positive-event-with-suppression.',
+    description: 'Create a campaign in Draft state from one of 6 whitelisted templates. Each template enforces a known-good triggering+targeting shape; arbitrary campaign authoring is intentionally not exposed yet (use amply_create_campaign for that). Always creates in Draft — activate via amply_set_campaign_state when ready. Templates: rate-review-after-positive-moment, deeplink-on-feature-discovery, deeplink-on-session-n, deeplink-on-custom-property, deeplink-after-positive-event-with-suppression, deeplink-on-property-change (fires on the CustomPropertyChanged system event — params: propertyKey, newValue, optional oldValue, deeplink).',
     inputSchema: createFromTemplateSchema,
     async handler(input: z.infer<typeof createFromTemplateSchema>): Promise<CallToolResult> {
       return safe(async () => {
@@ -412,6 +473,10 @@ export function buildCampaignFromTemplate(
     case 'deeplink-after-positive-event-with-suppression': {
       const v = t5Params.parse(params);
       return buildTemplate5(name, v);
+    }
+    case 'deeplink-on-property-change': {
+      const v = t6Params.parse(params);
+      return buildTemplate6(name, v);
     }
   }
 }

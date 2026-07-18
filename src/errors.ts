@@ -92,7 +92,13 @@ export function classifyGraphQLError(err: unknown): AmplyError {
     if (/(not\s+found|does\s+not\s+exist)/i.test(msg)) {
       return new AmplyError('not_found', msg);
     }
-    if (/(at\s+most\s+\d+\s+event\s+conditions|limit\s+reached|quota|over\s+the\s+limit|too\s+many)/i.test(msg)) {
+    // Cap-style failures only. Deliberately anchored: bare `quota` / `too many`
+    // would misclassify validation messages ("Quota name must not be blank",
+    // "Too many decimal places"). Recognized forms:
+    //  - the event-condition campaign cap ("at most N event conditions"),
+    //  - "<limit|quota> <reached|exceeded>" (e.g. "Active campaign limit reached"),
+    //  - "over the limit".
+    if (/(\bat\s+most\s+\d+\s+event\s+conditions\b|\b(limit|quota)\s+(reached|exceeded)\b|\bover\s+the\s+limit\b)/i.test(msg)) {
       return new AmplyError('limit_reached', msg, {
         hint: 'A limit was reached. Remove or consolidate existing resources/conditions, or upgrade your plan.',
       });

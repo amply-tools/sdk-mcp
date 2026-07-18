@@ -30,7 +30,15 @@ test('event-condition cap message classifies as limit_reached', () => {
 });
 
 test('plan limit / quota phrases classify as limit_reached', () => {
-  for (const msg of ['Project limit reached', 'Quota exceeded for applications', 'Too many API keys']) {
+  const positives = [
+    'Project limit reached',
+    'Active campaign limit reached', // real backend wording (CampaignCreateHandler)
+    'Quota exceeded for applications',
+    'Quota reached for this plan',
+    'Limit exceeded',
+    'You are over the limit for API keys',
+  ];
+  for (const msg of positives) {
     const e = classifyGraphQLError(gqlError(msg));
     assert.equal(e.code, 'limit_reached', `"${msg}" should be limit_reached`);
   }
@@ -39,4 +47,19 @@ test('plan limit / quota phrases classify as limit_reached', () => {
 test('ordinary validation message is NOT limit_reached', () => {
   const e = classifyGraphQLError(gqlError('This value should not be blank.'));
   assert.notEqual(e.code, 'limit_reached');
+});
+
+test('messages merely containing "quota" or "too many" are NOT limit_reached', () => {
+  // Bare `quota` / `too many` overreached: these are validation-shaped
+  // messages, not cap hits, and must not classify as limit_reached.
+  const negatives = [
+    'Quota name must not be blank',
+    'Too many decimal places',
+    'The quota field is required',
+  ];
+  for (const msg of negatives) {
+    const e = classifyGraphQLError(gqlError(msg));
+    assert.notEqual(e.code, 'limit_reached', `"${msg}" must NOT be limit_reached`);
+    assert.equal(e.code, 'graphql_error', `"${msg}" should fall through to graphql_error`);
+  }
 });

@@ -5,6 +5,9 @@ import {
   makeGetCampaignTool,
   makeSetCampaignStateTool,
   makeCreateCampaignFromTemplateTool,
+  makeCreateCampaignTool,
+  makeUpdateCampaignTool,
+  makeDescribeTargetingTool,
   buildCampaignFromTemplate,
 } from '../src/tools/campaigns.js';
 
@@ -105,6 +108,33 @@ test('deeplink-on-property-change — builds the CustomPropertyChanged trigger s
   assert.deepEqual(built.content, { url: 'app://recover' });
   // No device/customProperty targeting — the trigger itself carries the filter.
   assert.deepEqual(built.targeting, []);
+});
+
+test('amply_describe_targeting — documents the event-history condition slots', async () => {
+  const t = makeDescribeTargetingTool();
+  const result = await t.handler();
+  const first = result.content[0] as { type: 'text'; text: string };
+  const body = JSON.parse(first.text) as {
+    targetingSlots: Record<string, unknown>;
+    eventConditionsNote?: string;
+  };
+  assert.ok(body.targetingSlots.eventCount, 'eventCount slot must be described');
+  assert.ok(body.targetingSlots.eventDate, 'eventDate slot must be described');
+  const eventDateShape = JSON.stringify(body.targetingSlots.eventDate);
+  for (const mode of ['moreThanDaysAgo', 'moreThanDaysAgoOrNever', 'withinLastDays', 'beforeDate', 'afterDate']) {
+    assert.match(eventDateShape, new RegExp(mode), `eventDate description must list mode ${mode}`);
+  }
+  // The cap + SDK floor note agents must see before authoring event conditions.
+  assert.match(body.eventConditionsNote ?? '', /up to 20 event conditions per campaign/i);
+  assert.match(body.eventConditionsNote ?? '', /Amply SDK 0\.6\.1 or later/);
+  // eventCount must NOT advertise isSet/isNotSet.
+  const eventCountShape = JSON.stringify(body.targetingSlots.eventCount);
+  assert.doesNotMatch(eventCountShape, /isSet|isNotSet/);
+});
+
+test('create/update tool descriptions mention event conditions', () => {
+  assert.match(makeCreateCampaignTool().description, /event condition/i);
+  assert.match(makeUpdateCampaignTool().description, /event condition/i);
 });
 
 test('deeplink-on-property-change — omits oldValue param when not supplied; stringifies non-string values', () => {

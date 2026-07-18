@@ -484,7 +484,7 @@ export function buildCampaignFromTemplate(
 export function makeCreateCampaignTool() {
   return {
     name: 'amply_create_campaign',
-    description: 'Create a campaign from a full definition (trigger event + optional property-filter params, every-N repeat cadence, device/customProperty targeting, deeplink content). ALWAYS created in Draft — activate via amply_set_campaign_state. Use amply_describe_targeting to learn the targeting vocabulary.',
+    description: 'Create a campaign from a full definition (trigger event + optional property-filter params, every-N repeat cadence, device/customProperty targeting, event conditions on past behavior via eventCount/eventDate, deeplink content). ALWAYS created in Draft — activate via amply_set_campaign_state. Use amply_describe_targeting to learn the targeting vocabulary.',
     inputSchema: createSchema,
     async handler(input: z.infer<typeof createSchema>): Promise<CallToolResult> {
       return safe(async () => {
@@ -500,7 +500,7 @@ export function makeCreateCampaignTool() {
 export function makeUpdateCampaignTool() {
   return {
     name: 'amply_update_campaign',
-    description: 'Edit an existing campaign in place. TOP-LEVEL REPLACE: any field you provide (name/state/type/triggering/targeting/content) replaces that field wholesale; a provided `targeting` array REPLACES ALL targeting rules. Omitted fields keep their current value (current state is preserved — an edit never silently deactivates a live campaign). Returns the full resulting config.',
+    description: 'Edit an existing campaign in place. TOP-LEVEL REPLACE: any field you provide (name/state/type/triggering/targeting/content) replaces that field wholesale; a provided `targeting` array REPLACES ALL targeting rules (device slots and event conditions alike). Omitted fields keep their current value (current state is preserved — an edit never silently deactivates a live campaign). Returns the full resulting config.',
     inputSchema: updateSchema,
     async handler(input: z.infer<typeof updateSchema>): Promise<CallToolResult> {
       return safe(async () => {
@@ -542,8 +542,18 @@ export function makeDescribeTargetingTool() {
           application: { shape: '{ type: include|exclude, values: [applicationId UUID] }' },
           customProperty: { shape: '{ key, compareType, valueType?, value?, dateValue? }' },
           installDate: { shape: '{ compareType, value: { type: absolute|relative, absoluteValue?|relativeValue?+dimension } }' },
+          eventCount: {
+            shape: '{ event: { name, type: custom|system, params?: [{ name, value, compareType="===", valueType="string" }] }, compareType, value: int >= 0 }',
+            compareType: ['equal','notEqual','greater','less','greaterOrEqual','lessOrEqual'],
+            example: 'purchased at least twice = { event: { name: "PurchaseCompleted", type: "custom" }, compareType: "greaterOrEqual", value: 2 }; never purchased = { ..., compareType: "equal", value: 0 }',
+          },
+          eventDate: {
+            shape: '{ event, bound: first|last, mode: moreThanDaysAgo|moreThanDaysAgoOrNever|withinLastDays|beforeDate|afterDate, relativeValue (int days >= 1, relative modes) XOR absoluteValue ("YYYY-MM-DD", beforeDate/afterDate) }',
+            example: 'last purchase more than 30 days ago (or never) = { event: { name: "PurchaseCompleted", type: "custom" }, bound: "last", mode: "moreThanDaysAgoOrNever", relativeValue: 30 }',
+          },
         },
         note: 'Each targeting array item sets EXACTLY ONE slot. Multiple items AND together.',
+        eventConditionsNote: 'Up to 20 event conditions per campaign (eventCount/eventDate items); event conditions match only apps running Amply SDK 0.6.1 or later.',
         numberCompareType: ['equal','notEqual','greater','less','greaterOrEqual','lessOrEqual','isNotSet','isSet'],
         triggering: {
           event: '{ name, type: custom|system, params: [{ name, value, compareType="===", valueType="string" }] }',

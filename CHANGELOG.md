@@ -9,6 +9,8 @@ All notable changes to `@amplytools/amply-mcp` are documented here. Versioning f
 - New `limit_reached` error code. Cap-style rejections (plan quotas, the 20-event-condition campaign cap) previously classified as generic `validation_error`; agents can now tell "you hit a cap" apart from "fix your input".
 
 ### Fixed
+- The `deeplink-on-session-n` template failed against the backend ("Event 'SessionStarted' requires repeatEntity to be 'event', got 'session'") — it could never create a campaign. It now uses `repeatEntity: 'event'`, semantically identical for a SessionStarted trigger (every Nth SessionStarted event is every Nth session).
+- Tightened client-side validation to match the backend exactly: event-param `compareType` (`===`/`!==`/`>`/`>=`/`<`/`<=`) and `valueType` (`string`/`number`/`boolean`) are now strict enums on triggering params and event-condition params alike (both vocabularies exposed in `amply_describe_targeting`); `eventDate.absoluteValue` rejects calendar-impossible dates (e.g. `2026-02-30`); and `limit_reached` classification is anchored to explicit cap phrases so validation messages merely containing "quota" or "too many" no longer misclassify.
 - `amply_get_campaign` failed with `unsupported_targeting` for any campaign carrying an event condition — and `amply_update_campaign` with it, since update reads first. The campaign query now selects the `EventCountTargetingPayload` / `EventDateTargetingPayload` fragments (with the Int `value` aliased as `eventCountValue` to keep the union merge legal) and the read-back mapper reconstructs both slots, restoring full round-trip.
 
 ## [0.4.0] — 2026-05-30

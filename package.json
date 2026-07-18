@@ -1,6 +1,6 @@
 {
   "name": "@amplytools/amply-mcp",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Local MCP server for Amply — lets AI agents sign up, log in, create projects/applications, and fetch API keys from the Amply admin GraphQL API.",
   "type": "module",
   "main": "dist/index.js",

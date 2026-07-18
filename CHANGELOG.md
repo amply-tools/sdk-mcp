@@ -2,6 +2,15 @@
 
 All notable changes to `@amplytools/amply-mcp` are documented here. Versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] — 2026-07-18
+
+### Added
+- Event-history conditions in campaign targeting. `amply_create_campaign` / `amply_update_campaign` accept two new targeting slots: `eventCount` (`{ event, compareType, value }` — how many times an event happened, including `equal 0` for "never") and `eventDate` (`{ event, bound: first|last, mode, relativeValue XOR absoluteValue }` — when it first/last happened). Both carry the full event reference (`name`, `type`, optional `params` filters). Client-side validation mirrors the backend: `isSet`/`isNotSet` are rejected for `eventCount`, relative modes require `relativeValue` (days ≥ 1), `beforeDate`/`afterDate` require `absoluteValue` (`YYYY-MM-DD`). `amply_describe_targeting` documents the new slots plus the rules: up to 20 event conditions per campaign; event conditions match only apps running Amply SDK 0.6.1 or later.
+- New `limit_reached` error code. Cap-style rejections (plan quotas, the 20-event-condition campaign cap) previously classified as generic `validation_error`; agents can now tell "you hit a cap" apart from "fix your input".
+
+### Fixed
+- `amply_get_campaign` failed with `unsupported_targeting` for any campaign carrying an event condition — and `amply_update_campaign` with it, since update reads first. The campaign query now selects the `EventCountTargetingPayload` / `EventDateTargetingPayload` fragments (with the Int `value` aliased as `eventCountValue` to keep the union merge legal) and the read-back mapper reconstructs both slots, restoring full round-trip.
+
 ## [0.4.0] — 2026-05-30
 
 ### Added

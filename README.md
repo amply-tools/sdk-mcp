@@ -72,11 +72,28 @@ Endpoint can also be passed as `--endpoint <url>` to the binary.
 | `amply_get_campaign` | Fetches a single campaign by ID including triggering, targeting, and content. |
 | `amply_set_campaign_state` | Activate, pause, or archive a campaign. |
 | `amply_create_campaign_from_template` | Create a campaign from a curated template. Always Draft; activate explicitly. |
-| `amply_create_campaign` | Create a campaign from a full definition (event property filters, every-N repeat, device/customProperty targeting). Always Draft. |
+| `amply_create_campaign` | Create a campaign from a full definition (event property filters, every-N repeat, device/customProperty targeting, event conditions on past behavior — count + first/last occurrence date). Always Draft. |
 | `amply_update_campaign` | Edit a campaign in place; top-level replace; current state is preserved. |
-| `amply_describe_targeting` | Describe the targeting + triggering vocabulary (slots, comparators, predicate shapes). |
+| `amply_describe_targeting` | Describe the targeting + triggering vocabulary (slots, comparators, predicate shapes, event-condition rules and caps). |
 
-Every tool returns a JSON body inside the MCP `content[0].text` block. On failure, `isError: true` is set and the JSON contains `{ error: { code, message, hint? } }` where `code` is one of: `auth_required`, `invalid_credentials`, `not_found`, `validation_error`, `conflict`, `access_denied`, `network_error`, `graphql_error`, `internal_error`.
+Every tool returns a JSON body inside the MCP `content[0].text` block. On failure, `isError: true` is set and the JSON contains `{ error: { code, message, hint? } }`.
+
+### Error codes
+
+| Code | Meaning |
+|---|---|
+| `auth_required` | No cached credentials (or refresh failed) — run `amply_login` / `amply_signup`. |
+| `auth_expired` | Cached session token expired (HTTP 401); the server retries once with the refresh token, then asks for a re-login. |
+| `invalid_credentials` | Login/signup rejected by the backend. |
+| `not_found` | Project / application / API key / campaign doesn't exist, or no access. |
+| `validation_error` | The backend rejected the input. |
+| `limit_reached` | A cap was hit — a plan quota, or the per-campaign cap of 20 event conditions. |
+| `unsupported_targeting` | The campaign uses a targeting type this MCP can't round-trip; edit it in the Amply dashboard. |
+| `conflict` | E.g. bundleId already registered for the platform, or the campaign changed since you read it. |
+| `access_denied` | Access control denied the operation (e.g. not the owner). |
+| `network_error` | GraphQL endpoint unreachable / 5xx. |
+| `graphql_error` | GraphQL returned errors that couldn't be classified. |
+| `internal_error` | Unexpected failure. |
 
 ## Security model
 

@@ -117,6 +117,8 @@ export const CAMPAIGN = gql`
         ... on ApplicationTargetingPayload { type applications { id } }
         ... on CustomPropertyTargetingPayload { key customPropertyValueType: valueType compareType customPropertyValue: value dateValueType absoluteValue relativeValue dimension }
         ... on InstallDateTargetingPayload { compareType installDateValueType: valueType absoluteValue relativeValue dimension }
+        ... on EventCountTargetingPayload { compareType eventCountValue: value event { name type params { name value compareType valueType } } }
+        ... on EventDateTargetingPayload { bound mode relativeValue absoluteValue event { name type params { name value compareType valueType } } }
       }
     }
   }

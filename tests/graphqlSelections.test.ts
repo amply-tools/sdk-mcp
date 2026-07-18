@@ -9,9 +9,22 @@ test('CAMPAIGN query no longer selects non-existent project field', () => {
 });
 test('CAMPAIGN query selects targeting union with __typename + fragments', () => {
   assert.match(CAMPAIGN, /targeting\s*{[\s\S]*__typename/);
-  for (const t of ['AppVersionTargetingPayload','CustomPropertyTargetingPayload','ApplicationTargetingPayload','InstallDateTargetingPayload','OSVersionTargetingPayload','AppInstallVersionTargetingPayload','CountryTargetingPayload']) {
+  for (const t of ['AppVersionTargetingPayload','CustomPropertyTargetingPayload','ApplicationTargetingPayload','InstallDateTargetingPayload','OSVersionTargetingPayload','AppInstallVersionTargetingPayload','CountryTargetingPayload','EventCountTargetingPayload','EventDateTargetingPayload']) {
     assert.match(CAMPAIGN, new RegExp(`on ${t}`));
   }
+});
+test('CAMPAIGN event fragments select the nested event with params', () => {
+  // Both event payload fragments must carry the same event sub-selection
+  // (FieldsInSetCanMerge requires identical selections for the shared field).
+  const eventSelections = CAMPAIGN.match(/event\s*{\s*name\s+type\s+params\s*{\s*name\s+value\s+compareType\s+valueType\s*}\s*}/g) ?? [];
+  assert.equal(eventSelections.length, 2, 'expected identical event sub-selections on both event fragments');
+});
+test('CAMPAIGN aliases the EventCount Int value (eventCountValue)', () => {
+  // `value` is Int! on EventCountTargetingPayload but String! on the version
+  // payloads — selecting it raw fails FieldsInSetCanMerge (the 0.3.1 lesson).
+  assert.match(CAMPAIGN, /eventCountValue:\s*value/);
+  // And the eventDate fields merge clean unaliased.
+  assert.match(CAMPAIGN, /on EventDateTargetingPayload\s*{[^}]*bound\s+mode\s+relativeValue\s+absoluteValue/);
 });
 test('CAMPAIGN query aliases the conflicting union fields (value / valueType)', () => {
   // `value` is String! on the version payloads but String on CustomProperty, and

@@ -7,9 +7,6 @@
  *    (`buildCreateInput(projectId, name, args)`, `mergeUpdateInput(current, patch)`
  *    in `transform.ts`). Keeping them out keeps the shape focused on the parts
  *    that round-trip between read (`shapeGetCampaign`) and write.
- *  - `eventParam.compareType` / `valueType` — left as open `z.string()` because
- *    the backend `EventParamInput` carries defaults (`'==='` / `'string'`) and
- *    has no published enum at the GraphQL layer.
  *
  * Cross-field validation (e.g. `dateValue.type === 'absolute'` implies
  * `absoluteValue` is set) is enforced server-side by the backend's
@@ -38,11 +35,18 @@ export const eventDateMode = z.enum(['moreThanDaysAgo','moreThanDaysAgoOrNever',
 // conditions"); never-happened is expressed as `equal 0` / `moreThanDaysAgoOrNever`.
 export const eventConditionCompareType = z.enum(['equal','notEqual','greater','less','greaterOrEqual','lessOrEqual']);
 
+// Backend EventParamInput whitelists both fields (Assert\Choice):
+// compareType ∈ {===, !==, >, >=, <, <=}, valueType ∈ {string, number, boolean}.
+// The shared eventParam is used by triggering AND the event-condition slots
+// (eventCount/eventDate) — the whitelist applies to both paths.
+export const eventParamCompareType = z.enum(['===', '!==', '>', '>=', '<', '<=']);
+export const eventParamValueType = z.enum(['string', 'number', 'boolean']);
+
 export const eventParam = z.object({
   name: z.string().min(1),
   value: z.string(),
-  compareType: z.string().default('==='),
-  valueType: z.string().default('string'),
+  compareType: eventParamCompareType.default('==='),
+  valueType: eventParamValueType.default('string'),
 });
 
 /** Event reference shared by triggering and the event-history targeting slots. */

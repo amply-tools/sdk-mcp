@@ -4,7 +4,7 @@ import { CAMPAIGNS, CAMPAIGN } from '../graphql/queries.js';
 import { CAMPAIGN_CREATE, CAMPAIGN_CHANGE_STATE, CAMPAIGN_EDIT } from '../graphql/mutations.js';
 import { AmplyError } from '../errors.js';
 import { ok, safe, type CallToolResult } from './_helpers.js';
-import { campaignInputShape } from '../campaigns/shape.js';
+import { campaignInputShape, eventParamCompareType, eventParamValueType } from '../campaigns/shape.js';
 import { buildCreateInput, shapeGetCampaign, mergeUpdateInput, validateWriteInput, type RawCampaign } from '../campaigns/transform.js';
 
 /**
@@ -557,6 +557,10 @@ export function makeDescribeTargetingTool() {
         numberCompareType: ['equal','notEqual','greater','less','greaterOrEqual','lessOrEqual','isNotSet','isSet'],
         triggering: {
           event: '{ name, type: custom|system, params: [{ name, value, compareType="===", valueType="string" }] }',
+          // Event-param whitelists (backend-enforced). Apply to triggering
+          // params AND to `event.params` inside eventCount/eventDate slots.
+          eventParamCompareType: eventParamCompareType.options,
+          eventParamValueType: eventParamValueType.options,
           repeat: '{ repeatType: every|interval, repeatEntity: event|session, repeatValue: number[] }',
           repeatExample: 'every 2nd matching event = { repeatType:"every", repeatEntity:"event", repeatValue:[2] } (repeatValue MUST be an array of ints)',
           limit: '{ count?, limit?, limitType?: session|device, interval?, intervalDimension?: sec|min|hour|day }',

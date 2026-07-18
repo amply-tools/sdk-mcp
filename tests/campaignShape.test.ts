@@ -33,6 +33,65 @@ test('bad enum value is rejected', () => {
   assert.throws(() => targetingSlot.parse({ appVersion: { compareType: 'gt', value: '1' } }));
 });
 
+// --- eventParam compareType/valueType whitelist (0.5.0) ---
+// Backend EventParamInput whitelists compareType ∈ {===, !==, >, >=, <, <=}
+// and valueType ∈ {string, number, boolean}; the shared eventParam schema
+// must reject anything else client-side (applies to triggering AND event slots).
+
+const EVENT_PARAM_COMPARE_TYPES = ['===', '!==', '>', '>=', '<', '<='] as const;
+const EVENT_PARAM_VALUE_TYPES = ['string', 'number', 'boolean'] as const;
+
+function triggeringWithParam(param: Record<string, unknown>) {
+  return {
+    type: 'DeepLink',
+    triggering: {
+      event: { name: 'ButtonTapped', type: 'custom', params: [param] },
+      repeat: { repeatType: 'every', repeatEntity: 'event', repeatValue: [1] },
+    },
+    targeting: [],
+    content: { url: 'app://x' },
+  };
+}
+
+test('eventParam accepts every whitelisted compareType and valueType (triggering path)', () => {
+  for (const compareType of EVENT_PARAM_COMPARE_TYPES) {
+    for (const valueType of EVENT_PARAM_VALUE_TYPES) {
+      const parsed = campaignInputShape.parse(
+        triggeringWithParam({ name: 'p', value: '1', compareType, valueType }),
+      );
+      assert.equal(parsed.triggering.event.params[0]!.compareType, compareType);
+      assert.equal(parsed.triggering.event.params[0]!.valueType, valueType);
+    }
+  }
+});
+
+test('eventParam rejects non-whitelisted compareType (triggering path)', () => {
+  for (const compareType of ['equal', '==', 'contains', 'gt']) {
+    assert.throws(
+      () => campaignInputShape.parse(triggeringWithParam({ name: 'p', value: '1', compareType })),
+      Error,
+      `compareType "${compareType}" must be rejected`,
+    );
+  }
+});
+
+test('eventParam rejects non-whitelisted valueType (triggering path)', () => {
+  for (const valueType of ['datetime', 'text', 'int']) {
+    assert.throws(
+      () => campaignInputShape.parse(triggeringWithParam({ name: 'p', value: '1', valueType })),
+      Error,
+      `valueType "${valueType}" must be rejected`,
+    );
+  }
+});
+
+test('eventParam whitelist also applies to event-condition slots (eventCount path)', () => {
+  const base = { event: { name: 'X', type: 'custom', params: [{ name: 'p', value: '1', compareType: 'equal' }] }, compareType: 'equal', value: 1 };
+  assert.throws(() => targetingSlot.parse({ eventCount: base }), Error, 'bad param compareType inside eventCount must be rejected');
+  const badValueType = { event: { name: 'X', type: 'custom', params: [{ name: 'p', value: '1', valueType: 'datetime' }] }, compareType: 'equal', value: 1 };
+  assert.throws(() => targetingSlot.parse({ eventCount: badValueType }), Error, 'bad param valueType inside eventCount must be rejected');
+});
+
 // --- Event-history condition slots (0.5.0) ---
 
 test('eventCount slot with event params parses; params defaults applied', () => {

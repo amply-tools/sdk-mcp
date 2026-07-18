@@ -132,6 +132,17 @@ test('amply_describe_targeting — documents the event-history condition slots',
   assert.doesNotMatch(eventCountShape, /isSet|isNotSet/);
 });
 
+test('amply_describe_targeting — exposes the eventParam compareType/valueType vocabularies', async () => {
+  const t = makeDescribeTargetingTool();
+  const result = await t.handler();
+  const first = result.content[0] as { type: 'text'; text: string };
+  const body = JSON.parse(first.text) as {
+    triggering: { eventParamCompareType?: string[]; eventParamValueType?: string[] };
+  };
+  assert.deepEqual(body.triggering.eventParamCompareType, ['===', '!==', '>', '>=', '<', '<=']);
+  assert.deepEqual(body.triggering.eventParamValueType, ['string', 'number', 'boolean']);
+});
+
 test('create/update tool descriptions mention event conditions', () => {
   assert.match(makeCreateCampaignTool().description, /event condition/i);
   assert.match(makeUpdateCampaignTool().description, /event condition/i);

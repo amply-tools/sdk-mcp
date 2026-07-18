@@ -9,6 +9,7 @@ export type AmplyErrorCode =
   | 'invalid_credentials'  // login / signup rejected by backend.
   | 'not_found'            // Project / Application / ApiKey doesn't exist or no access.
   | 'validation_error'     // Backend rejected input.
+  | 'limit_reached'        // A cap was hit (plan quota, or the 20-event-condition campaign cap).
   | 'conflict'             // e.g. bundleId already registered for this platform.
   | 'access_denied'        // Access control denied access (e.g. not the owner).
   | 'network_error'        // GraphQL endpoint unreachable / 5xx.
@@ -91,9 +92,9 @@ export function classifyGraphQLError(err: unknown): AmplyError {
     if (/(not\s+found|does\s+not\s+exist)/i.test(msg)) {
       return new AmplyError('not_found', msg);
     }
-    if (/(limit\s+reached|quota|over\s+the\s+limit|too\s+many)/i.test(msg)) {
-      return new AmplyError('validation_error', msg, {
-        hint: 'Your plan limit was reached. Remove an existing resource or upgrade.',
+    if (/(at\s+most\s+\d+\s+event\s+conditions|limit\s+reached|quota|over\s+the\s+limit|too\s+many)/i.test(msg)) {
+      return new AmplyError('limit_reached', msg, {
+        hint: 'A limit was reached. Remove or consolidate existing resources/conditions, or upgrade your plan.',
       });
     }
     // Backend validation surfaces as multiple errors[]; keep them all in the message.

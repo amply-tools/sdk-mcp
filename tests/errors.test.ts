@@ -17,3 +17,26 @@ test('unsupported_targeting code is valid (type smoke)', () => {
   const e = new AmplyError('unsupported_targeting', 'x');
   assert.equal(e.code, 'unsupported_targeting');
 });
+
+function gqlError(message: string) {
+  return { response: { errors: [{ message }], status: 200 } };
+}
+
+test('event-condition cap message classifies as limit_reached', () => {
+  const e = classifyGraphQLError(gqlError('A campaign can have at most 20 event conditions'));
+  assert.equal(e.code, 'limit_reached');
+  assert.match(e.message, /at most 20 event conditions/);
+  assert.ok(e.hint, 'limit_reached should carry a recovery hint');
+});
+
+test('plan limit / quota phrases classify as limit_reached', () => {
+  for (const msg of ['Project limit reached', 'Quota exceeded for applications', 'Too many API keys']) {
+    const e = classifyGraphQLError(gqlError(msg));
+    assert.equal(e.code, 'limit_reached', `"${msg}" should be limit_reached`);
+  }
+});
+
+test('ordinary validation message is NOT limit_reached', () => {
+  const e = classifyGraphQLError(gqlError('This value should not be blank.'));
+  assert.notEqual(e.code, 'limit_reached');
+});

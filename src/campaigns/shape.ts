@@ -107,6 +107,23 @@ const RELATIVE_EVENT_DATE_MODES: ReadonlyArray<z.infer<typeof eventDateMode>> =
   ['moreThanDaysAgo', 'moreThanDaysAgoOrNever', 'withinLastDays'];
 const ABSOLUTE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
+// The pattern alone admits impossible dates (2026-02-30, 2026-99-99).
+// Parse-and-roundtrip through Date.UTC: JS rolls invalid components over
+// (Feb 30 -> Mar 2), so a mismatch on the way back means the date never existed.
+function isRealCalendarDate(value: string): boolean {
+  const [year, month, day] = value.split('-').map(Number);
+  const parsed = new Date(Date.UTC(year!, month! - 1, day!));
+  return (
+    parsed.getUTCFullYear() === year &&
+    parsed.getUTCMonth() === month! - 1 &&
+    parsed.getUTCDate() === day
+  );
+}
+
+const absoluteDateValue = z.string()
+  .regex(ABSOLUTE_DATE_PATTERN, 'absoluteValue must be formatted YYYY-MM-DD')
+  .refine(isRealCalendarDate, 'absoluteValue must be a real calendar date');
+
 // relativeValue XOR absoluteValue, decided by mode — mirrors the backend's
 // EventDateTargetingInput callback validation so bad input fails client-side.
 const eventDateSlot = z.object({
@@ -114,7 +131,7 @@ const eventDateSlot = z.object({
   bound: eventDateBound,
   mode: eventDateMode,
   relativeValue: z.number().int().min(1).optional(),
-  absoluteValue: z.string().regex(ABSOLUTE_DATE_PATTERN, 'absoluteValue must be formatted YYYY-MM-DD').optional(),
+  absoluteValue: absoluteDateValue.optional(),
 }).superRefine((o, ctx) => {
   const isRelativeMode = RELATIVE_EVENT_DATE_MODES.includes(o.mode);
   if (isRelativeMode) {

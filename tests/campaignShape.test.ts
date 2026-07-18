@@ -168,6 +168,29 @@ test('eventDate relativeValue must be >= 1; absoluteValue must be YYYY-MM-DD', (
   assert.throws(() => targetingSlot.parse({ eventDate: { ...base, mode: 'beforeDate', absoluteValue: '2026-7-1' } }));
 });
 
+test('eventDate absoluteValue must be a real calendar date', () => {
+  const base = { event: { name: 'X', type: 'custom' }, bound: 'last', mode: 'beforeDate' };
+  // Valid leap day passes (2028 is a leap year).
+  assert.ok(targetingSlot.parse({ eventDate: { ...base, absoluteValue: '2028-02-29' } }));
+  // Impossible dates that satisfy the \d{4}-\d{2}-\d{2} pattern are rejected.
+  assert.throws(
+    () => targetingSlot.parse({ eventDate: { ...base, absoluteValue: '2026-02-30' } }),
+    Error,
+    '2026-02-30 must be rejected (February has no 30th)',
+  );
+  assert.throws(
+    () => targetingSlot.parse({ eventDate: { ...base, absoluteValue: '2026-99-99' } }),
+    Error,
+    '2026-99-99 must be rejected (no month 99)',
+  );
+  // Non-leap-year Feb 29 is also impossible.
+  assert.throws(
+    () => targetingSlot.parse({ eventDate: { ...base, absoluteValue: '2026-02-29' } }),
+    Error,
+    '2026-02-29 must be rejected (2026 is not a leap year)',
+  );
+});
+
 test('event slots still respect the exactly-one-slot refine', () => {
   assert.throws(() => targetingSlot.parse({
     eventCount: { event: { name: 'X', type: 'custom' }, compareType: 'equal', value: 1 },

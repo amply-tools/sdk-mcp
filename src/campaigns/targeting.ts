@@ -8,6 +8,21 @@ function pruneNullish(obj: Record<string, unknown>): Record<string, unknown> {
   return out;
 }
 
+interface RawEventPayload {
+  name: string;
+  type: string;
+  params?: Array<{ name: string; value: string; compareType: string; valueType: string }> | null;
+}
+
+/** Rebuild the EventInput-compatible event reference from an event payload. */
+function eventPayloadToInput(event: RawEventPayload): Record<string, unknown> {
+  return {
+    name: event.name,
+    type: event.type,
+    params: (event.params ?? []).map((p) => ({ name: p.name, value: p.value, compareType: p.compareType, valueType: p.valueType })),
+  };
+}
+
 export function targetingPayloadToInput(payloads: RawTargetingPayload[] | null | undefined): Array<Record<string, unknown>> {
   if (!payloads) return [];
   return payloads.map((p) => {
@@ -31,6 +46,23 @@ export function targetingPayloadToInput(payloads: RawTargetingPayload[] | null |
       }
       case 'InstallDateTargetingPayload':
         return { installDate: { compareType: p.compareType, value: pruneNullish({ type: p.installDateValueType, absoluteValue: p.absoluteValue, relativeValue: p.relativeValue, dimension: p.dimension }) } };
+      case 'EventCountTargetingPayload':
+        // `value` is Int on this payload and clashes with String! elsewhere in
+        // the union, so the query aliases it as `eventCountValue` (see queries.ts).
+        return {
+          eventCount: {
+            event: eventPayloadToInput(p.event as unknown as RawEventPayload),
+            compareType: p.compareType,
+            value: p.eventCountValue,
+          },
+        };
+      case 'EventDateTargetingPayload':
+        return {
+          eventDate: {
+            event: eventPayloadToInput(p.event as unknown as RawEventPayload),
+            ...pruneNullish({ bound: p.bound, mode: p.mode, relativeValue: p.relativeValue, absoluteValue: p.absoluteValue }),
+          },
+        };
       default:
         throw new AmplyError('unsupported_targeting', `Campaign uses a targeting type this API can't render: ${p.__typename}`, {
           hint: 'Edit it in the Amply dashboard; the MCP cannot round-trip this targeting type.',

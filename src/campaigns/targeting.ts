@@ -60,7 +60,7 @@ export function targetingPayloadToInput(payloads: RawTargetingPayload[] | null |
         return {
           eventDate: {
             event: eventPayloadToInput(p.event as unknown as RawEventPayload),
-            ...pruneNullish({ bound: p.bound, mode: p.mode, relativeValue: p.relativeValue, absoluteValue: p.absoluteValue }),
+            ...pruneNullish({ bound: p.bound, mode: p.mode, relativeValue: p.relativeValue, relativeUnit: p.relativeUnit, absoluteValue: p.absoluteValue }),
           },
         };
       default:

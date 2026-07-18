@@ -24,7 +24,10 @@ test('CAMPAIGN aliases the EventCount Int value (eventCountValue)', () => {
   // payloads — selecting it raw fails FieldsInSetCanMerge (the 0.3.1 lesson).
   assert.match(CAMPAIGN, /eventCountValue:\s*value/);
   // And the eventDate fields merge clean unaliased.
-  assert.match(CAMPAIGN, /on EventDateTargetingPayload\s*{[^}]*bound\s+mode\s+relativeValue\s+absoluteValue/);
+  assert.match(
+    CAMPAIGN,
+    /on EventDateTargetingPayload\s*{[^}]*bound\s+mode\s+relativeValue\s+relativeUnit\s+absoluteValue/
+  );
 });
 test('CAMPAIGN query aliases the conflicting union fields (value / valueType)', () => {
   // `value` is String! on the version payloads but String on CustomProperty, and

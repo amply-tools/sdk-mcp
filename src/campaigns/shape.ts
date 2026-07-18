@@ -19,7 +19,7 @@ export const numberCompareType = z.enum(['equal','notEqual','greater','less','gr
 export const includeTargetingType = z.enum(['include','exclude']);
 export const customPropertyValueType = z.enum(['string','number','boolean','datetime']);
 export const dateValueType = z.enum(['absolute','relative']);
-export const timeDimension = z.enum(['days']);
+export const timeDimension = z.enum(['minutes','hours','days']);
 export const eventType = z.enum(['custom','system']);
 export const repeatType = z.enum(['interval','every']);
 export const repeatEntity = z.enum(['event','session']);
@@ -131,12 +131,14 @@ const eventDateSlot = z.object({
   bound: eventDateBound,
   mode: eventDateMode,
   relativeValue: z.number().int().min(1).optional(),
+  // Unit for relativeValue; omitted means days (backend default).
+  relativeUnit: timeDimension.optional(),
   absoluteValue: absoluteDateValue.optional(),
 }).superRefine((o, ctx) => {
   const isRelativeMode = RELATIVE_EVENT_DATE_MODES.includes(o.mode);
   if (isRelativeMode) {
     if (o.relativeValue === undefined) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['relativeValue'], message: `mode "${o.mode}" requires relativeValue (days)` });
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['relativeValue'], message: `mode "${o.mode}" requires relativeValue (minutes/hours/days per relativeUnit, default days)` });
     }
     if (o.absoluteValue !== undefined) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['absoluteValue'], message: `mode "${o.mode}" must not set absoluteValue` });
@@ -148,6 +150,9 @@ const eventDateSlot = z.object({
   }
   if (o.relativeValue !== undefined) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['relativeValue'], message: `mode "${o.mode}" must not set relativeValue` });
+  }
+  if (o.relativeUnit !== undefined) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['relativeUnit'], message: `mode "${o.mode}" must not set relativeUnit` });
   }
 });
 

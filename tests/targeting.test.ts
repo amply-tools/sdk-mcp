@@ -71,6 +71,41 @@ test('eventDate relative payload -> eventDate slot, null absoluteValue dropped',
   }]);
 });
 
+test('eventDate payload with relativeUnit keeps the unit; null unit dropped', () => {
+  const out = targetingPayloadToInput([
+    {
+      __typename: 'EventDateTargetingPayload',
+      event: { name: 'PurchaseCompleted', type: 'custom', params: [] },
+      bound: 'last',
+      mode: 'withinLastDays',
+      relativeValue: 2,
+      relativeUnit: 'hours',
+      absoluteValue: null,
+    },
+    {
+      __typename: 'EventDateTargetingPayload',
+      event: { name: 'PurchaseCompleted', type: 'custom', params: [] },
+      bound: 'last',
+      mode: 'moreThanDaysAgo',
+      relativeValue: 30,
+      relativeUnit: null,
+      absoluteValue: null,
+    },
+  ]);
+  assert.deepEqual(out, [
+    {
+      eventDate: { event: { name: 'PurchaseCompleted', type: 'custom', params: [] }, bound: 'last', mode: 'withinLastDays', relativeValue: 2, relativeUnit: 'hours' },
+    },
+    {
+      eventDate: { event: { name: 'PurchaseCompleted', type: 'custom', params: [] }, bound: 'last', mode: 'moreThanDaysAgo', relativeValue: 30 },
+    },
+  ]);
+  // Both reconstructed slots must survive the input schema (update read-first path).
+  for (const slot of out) {
+    assert.doesNotThrow(() => targetingSlot.parse(slot));
+  }
+});
+
 test('eventDate absolute payload -> eventDate slot, null relativeValue dropped', () => {
   const out = targetingPayloadToInput([{
     __typename: 'EventDateTargetingPayload',

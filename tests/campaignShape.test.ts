@@ -161,6 +161,30 @@ test('eventDate absolute modes require absoluteValue and forbid relativeValue', 
   }
 });
 
+test('eventDate relativeUnit is optional on relative modes and rejected elsewhere', () => {
+  const relative = { event: { name: 'X', type: 'custom' }, bound: 'last', mode: 'withinLastDays' };
+  // Valid: any of the three units.
+  for (const relativeUnit of ['minutes', 'hours', 'days']) {
+    assert.ok(targetingSlot.parse({ eventDate: { ...relative, relativeValue: 2, relativeUnit } }));
+  }
+  // Unknown unit rejected.
+  assert.throws(() =>
+    targetingSlot.parse({ eventDate: { ...relative, relativeValue: 2, relativeUnit: 'weeks' } }),
+  );
+  // Unit on an absolute mode rejected.
+  assert.throws(() =>
+    targetingSlot.parse({
+      eventDate: {
+        event: { name: 'X', type: 'custom' },
+        bound: 'last',
+        mode: 'beforeDate',
+        absoluteValue: '2026-07-01',
+        relativeUnit: 'days',
+      },
+    }),
+  );
+});
+
 test('eventDate relativeValue must be >= 1; absoluteValue must be YYYY-MM-DD', () => {
   const base = { event: { name: 'X', type: 'custom' }, bound: 'first' };
   assert.throws(() => targetingSlot.parse({ eventDate: { ...base, mode: 'withinLastDays', relativeValue: 0 } }));

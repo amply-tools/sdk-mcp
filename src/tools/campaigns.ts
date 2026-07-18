@@ -551,8 +551,8 @@ export function makeDescribeTargetingTool() {
             example: 'purchased at least twice = { event: { name: "PurchaseCompleted", type: "custom" }, compareType: "greaterOrEqual", value: 2 }; never purchased = { ..., compareType: "equal", value: 0 }',
           },
           eventDate: {
-            shape: '{ event, bound: first|last, mode: moreThanDaysAgo|moreThanDaysAgoOrNever|withinLastDays|beforeDate|afterDate, relativeValue (int days >= 1, relative modes) XOR absoluteValue ("YYYY-MM-DD", beforeDate/afterDate) }',
-            example: 'last purchase more than 30 days ago (or never) = { event: { name: "PurchaseCompleted", type: "custom" }, bound: "last", mode: "moreThanDaysAgoOrNever", relativeValue: 30 }',
+            shape: '{ event, bound: first|last, mode: moreThanDaysAgo|moreThanDaysAgoOrNever|withinLastDays|beforeDate|afterDate, relativeValue (int >= 1, relative modes) + relativeUnit? (minutes|hours|days, default days) XOR absoluteValue ("YYYY-MM-DD", beforeDate/afterDate) }',
+            example: 'last purchase more than 30 days ago (or never) = { event: { name: "PurchaseCompleted", type: "custom" }, bound: "last", mode: "moreThanDaysAgoOrNever", relativeValue: 30 }; purchased less than 2 hours ago = { event: {...}, bound: "last", mode: "withinLastDays", relativeValue: 2, relativeUnit: "hours" }',
           },
         },
         note: 'Each targeting array item sets EXACTLY ONE slot. Multiple items AND together.',

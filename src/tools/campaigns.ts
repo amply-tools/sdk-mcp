@@ -297,7 +297,10 @@ function buildTemplate3(name: string, params: z.infer<typeof t3Params>): LegacyT
     triggering: {
       // SDK constant: SystemEvents.SESSION_START = "SessionStarted" (events/Event.kt).
       event: { name: 'SessionStarted', type: 'system', params: [] },
-      repeat: { repeatType: 'every', repeatEntity: 'session', repeatValue: [params.sessionNumber] },
+      // The backend requires repeatEntity 'event' for SessionStarted (rejects
+      // 'session'). Semantically identical here: every Nth SessionStarted
+      // event == every Nth session.
+      repeat: { repeatType: 'every', repeatEntity: 'event', repeatValue: [params.sessionNumber] },
       limit: {},
     },
     targeting: [],

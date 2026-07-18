@@ -85,6 +85,25 @@ test('amply_create_campaign_from_template — accepts all 6 templates', () => {
   }
 });
 
+test('deeplink-on-session-n — builds a SessionStarted trigger with repeatEntity event', () => {
+  const built = buildCampaignFromTemplate('Paywall on session 3', 'deeplink-on-session-n', {
+    sessionNumber: 3,
+    deeplink: 'app://paywall',
+  });
+  assert.equal(built.triggering.event.name, 'SessionStarted');
+  assert.equal(built.triggering.event.type, 'system');
+  // Backend rejects repeatEntity 'session' for SessionStarted ("Event
+  // 'SessionStarted' requires repeatEntity to be 'event'"). Counting
+  // SessionStarted events IS counting sessions, so 'event' is semantically
+  // identical for this trigger.
+  assert.deepEqual(built.triggering.repeat, {
+    repeatType: 'every',
+    repeatEntity: 'event',
+    repeatValue: [3],
+  });
+  assert.deepEqual(built.content, { url: 'app://paywall' });
+});
+
 test('deeplink-on-property-change — builds the CustomPropertyChanged trigger shape', () => {
   const built = buildCampaignFromTemplate('Trial expired recovery', 'deeplink-on-property-change', {
     propertyKey: 'subscription_status',

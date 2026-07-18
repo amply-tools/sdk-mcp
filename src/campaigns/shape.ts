@@ -31,11 +31,25 @@ export const campaignState = z.enum(['Draft','Active','Cancel']);
 export const limitType = z.enum(['session','device']);
 export const limitIntervalDimension = z.enum(['sec','min','hour','day']);
 
+export const eventDateBound = z.enum(['first','last']);
+export const eventDateMode = z.enum(['moreThanDaysAgo','moreThanDaysAgoOrNever','withinLastDays','beforeDate','afterDate']);
+// NumberCompareType minus isSet/isNotSet — the backend rejects existence
+// operators for event conditions ("Compare type is not supported for event
+// conditions"); never-happened is expressed as `equal 0` / `moreThanDaysAgoOrNever`.
+export const eventConditionCompareType = z.enum(['equal','notEqual','greater','less','greaterOrEqual','lessOrEqual']);
+
 export const eventParam = z.object({
   name: z.string().min(1),
   value: z.string(),
   compareType: z.string().default('==='),
   valueType: z.string().default('string'),
+});
+
+/** Event reference shared by triggering and the event-history targeting slots. */
+export const campaignEvent = z.object({
+  name: z.string().min(1),
+  type: eventType,
+  params: z.array(eventParam).default([]),
 });
 
 const repeatBase = {
@@ -62,7 +76,7 @@ export const limit = z.object({
 }).default({});
 
 export const triggering = z.object({
-  event: z.object({ name: z.string().min(1), type: eventType, params: z.array(eventParam).default([]) }),
+  event: campaignEvent,
   repeat,
   limit,
 });
@@ -75,6 +89,46 @@ export const dateValue = z.object({
 });
 
 const numberSlot = z.object({ compareType: numberCompareType, value: z.string().min(1) });
+
+// Event-history condition slots (backend caps them at 20 per campaign; only
+// apps running Amply SDK 0.6.1+ match them). FLAT wire shape — deliberately
+// NOT the nested `dateValue` sub-schema used by customProperty/installDate.
+const eventCountSlot = z.object({
+  event: campaignEvent,
+  compareType: eventConditionCompareType,
+  value: z.number().int().min(0),
+});
+
+const RELATIVE_EVENT_DATE_MODES: ReadonlyArray<z.infer<typeof eventDateMode>> =
+  ['moreThanDaysAgo', 'moreThanDaysAgoOrNever', 'withinLastDays'];
+const ABSOLUTE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+// relativeValue XOR absoluteValue, decided by mode — mirrors the backend's
+// EventDateTargetingInput callback validation so bad input fails client-side.
+const eventDateSlot = z.object({
+  event: campaignEvent,
+  bound: eventDateBound,
+  mode: eventDateMode,
+  relativeValue: z.number().int().min(1).optional(),
+  absoluteValue: z.string().regex(ABSOLUTE_DATE_PATTERN, 'absoluteValue must be formatted YYYY-MM-DD').optional(),
+}).superRefine((o, ctx) => {
+  const isRelativeMode = RELATIVE_EVENT_DATE_MODES.includes(o.mode);
+  if (isRelativeMode) {
+    if (o.relativeValue === undefined) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['relativeValue'], message: `mode "${o.mode}" requires relativeValue (days)` });
+    }
+    if (o.absoluteValue !== undefined) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['absoluteValue'], message: `mode "${o.mode}" must not set absoluteValue` });
+    }
+    return;
+  }
+  if (o.absoluteValue === undefined) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['absoluteValue'], message: `mode "${o.mode}" requires absoluteValue (YYYY-MM-DD)` });
+  }
+  if (o.relativeValue !== undefined) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['relativeValue'], message: `mode "${o.mode}" must not set relativeValue` });
+  }
+});
 
 export const targetingSlot = z.object({
   osVersion: numberSlot.optional(),
@@ -90,6 +144,8 @@ export const targetingSlot = z.object({
     dateValue: dateValue.optional(),
   }).optional(),
   installDate: z.object({ compareType: numberCompareType, value: dateValue }).optional(),
+  eventCount: eventCountSlot.optional(),
+  eventDate: eventDateSlot.optional(),
 }).refine(
   (o) => Object.values(o).filter((v) => v !== undefined).length === 1,
   { message: 'each targeting item must set exactly one slot' },

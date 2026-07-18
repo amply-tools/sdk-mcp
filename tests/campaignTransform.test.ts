@@ -1,7 +1,7 @@
 // tests/campaignTransform.test.ts
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { shapeGetCampaign, buildCreateInput, mergeUpdateInput } from '../src/campaigns/transform.js';
+import { shapeGetCampaign, buildCreateInput, mergeUpdateInput, validateWriteInput } from '../src/campaigns/transform.js';
 
 const rawCampaign = {
   id: 'c1', name: 'Rewarded', type: 'DeepLink', state: 'Active',
@@ -34,6 +34,27 @@ test('mergeUpdateInput preserves current state/type when patch omits them', () =
   assert.equal(merged.type, 'DeepLink');
   assert.deepEqual((merged.triggering as { repeat: { repeatValue: number[] } }).repeat.repeatValue, [3]);
   assert.deepEqual(merged.targeting, current.targeting); // untouched targeting preserved
+});
+
+test('null-padded backend triggering survives the update read-first path', () => {
+  // The live backend serializes the triggering JSON with explicit nulls for
+  // unset nullable fields. Replaying that through validateWriteInput (the
+  // amply_update_campaign path: read -> merge -> re-validate) must not fail —
+  // .optional() Zod fields reject null, so the nulls have to be pruned on read.
+  const raw = {
+    ...rawCampaign,
+    triggering: {
+      event: { name: 'SessionStarted', type: 'system', params: [] },
+      repeat: { repeatType: 'every', repeatEntity: 'event', repeatValue: [1], subRepeat: null },
+      limit: { count: null, limit: null, limitType: null, interval: null, intervalDimension: null },
+    },
+  };
+  const current = shapeGetCampaign(raw);
+  const merged = mergeUpdateInput(current, { name: 'renamed' });
+  assert.doesNotThrow(() => validateWriteInput(merged));
+  const validated = validateWriteInput(merged);
+  assert.deepEqual((validated.triggering as { limit: unknown }).limit, {});
+  assert.equal('subRepeat' in (validated.triggering as { repeat: Record<string, unknown> }).repeat, false);
 });
 
 test('mergeUpdateInput replaces targeting wholesale when provided', () => {

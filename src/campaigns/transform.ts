@@ -12,6 +12,26 @@ export interface ShapedCampaign extends CampaignInputShape {
   id: string; name: string; state: string; createdAt?: string; updatedAt?: string;
 }
 
+/**
+ * Recursively drop null/undefined entries from objects (arrays keep their
+ * elements). The backend serializes the stored triggering JSON with explicit
+ * nulls for unset nullable fields (subRepeat, the limit fields); the canonical
+ * Zod shape models those as absent-or-value (`.optional()`), so replaying a
+ * read-back triggering through validateWriteInput would fail without this.
+ */
+function pruneNullsDeep(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(pruneNullsDeep);
+  if (value !== null && typeof value === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      if (v === null || v === undefined) continue;
+      out[k] = pruneNullsDeep(v);
+    }
+    return out;
+  }
+  return value;
+}
+
 /** Normalize a get-campaign GraphQL result into the canonical (input-compatible) shape. */
 export function shapeGetCampaign(raw: RawCampaign): ShapedCampaign {
   return {
@@ -19,7 +39,7 @@ export function shapeGetCampaign(raw: RawCampaign): ShapedCampaign {
     name: raw.name,
     type: raw.type as ShapedCampaign['type'],
     state: raw.state,
-    triggering: raw.triggering as ShapedCampaign['triggering'],
+    triggering: pruneNullsDeep(raw.triggering) as ShapedCampaign['triggering'],
     targeting: targetingPayloadToInput(raw.targeting) as ShapedCampaign['targeting'],
     content: (raw.content ?? null) as ShapedCampaign['content'],
     createdAt: raw.createdAt,

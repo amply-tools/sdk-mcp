@@ -2,6 +2,29 @@
 
 All notable changes to `@amplytools/amply-mcp` are documented here. Versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## Retired — 2026-07-30
+
+This package no longer works and has been deprecated on npm for every published version.
+
+Amply's MCP server moved into Amply's backend and is hosted at
+`https://api.amply.tools/mcp`. The path this package pointed at, `https://api.amply.tools/mcp/`,
+now serves the MCP protocol rather than the admin GraphQL API, so every tool call from this
+package returns 404. No `AMPLY_ENDPOINT` value avoids it — the client appends `/mcp/` to any
+host it is given.
+
+Connect your agent to the hosted server instead:
+
+```bash
+claude mcp add --transport http amply https://api.amply.tools/mcp
+```
+
+Authentication is now OAuth in the browser with individually granted scopes, and access is
+revoked in the Amply admin under Profile Settings → Connected Apps. If you used this package,
+delete `~/.amply/credentials.json` — it holds a live refresh token.
+
+The provisioning tools (`amply_ensure_app` and friends) have no hosted equivalent yet; that
+step goes through the admin UI until it returns. See the README for the full migration table.
+
 ## [0.5.0] — 2026-07-18
 
 ### Added

@@ -1,6 +1,101 @@
+> # ⚠️ Retired — this package no longer works
+>
+> Amply's MCP server is now **hosted by Amply's backend**. This npm package was a local
+> stdio server that talked to the admin GraphQL API at `https://api.amply.tools/mcp/`.
+> That path now serves the MCP protocol itself, so **every tool call from this package
+> returns 404**. There is no environment variable that fixes it — the client appends
+> `/mcp/` to whatever host you give it.
+>
+> Nothing to install any more. Point your agent at the hosted server:
+>
+> ```bash
+> claude mcp add --transport http amply https://api.amply.tools/mcp
+> ```
+>
+> Then run `/mcp` in Claude Code, approve the scopes in the browser, and you are connected.
+> **[Full migration guide below.](#migrating-to-the-hosted-mcp)**
+>
+> If you have used this package before, delete `~/.amply/credentials.json` — it holds a
+> live refresh token for your Amply account.
+
 # `@amplytools/amply-mcp`
 
-Local MCP server for [Amply](https://amply.tools) — lets your AI agent sign up, log in, create projects, register applications, and fetch API keys without ever opening the Amply admin UI. Pairs with the [`amply-integration` skill](../amply-skill/) for a hands-free SDK integration.
+**Retired.** This was a local MCP server for [Amply](https://amply.tools), letting an AI agent provision an app and fetch its API keys without opening the admin UI. Amply's MCP is now hosted — see above.
+
+## Migrating to the hosted MCP
+
+### What changed
+
+| | This package (retired) | Hosted MCP |
+|---|---|---|
+| **Install** | `claude mcp add amply -- npx -y @amplytools/amply-mcp` | `claude mcp add --transport http amply https://api.amply.tools/mcp` |
+| **Runs** | a Node process on your machine (Node ≥ 20) | nothing locally |
+| **Transport** | stdio | streamable HTTP |
+| **Sign in** | `amply_login` with your email and password, in the chat | OAuth in the browser — you approve, the agent never sees a password |
+| **Credentials** | JWT + refresh token in `~/.amply/credentials.json` | short-lived token held by your MCP client; nothing on disk |
+| **Revoking access** | delete the credentials file | Amply admin → **Profile Settings → Connected Apps** |
+| **Permissions** | all-or-nothing: whatever your account could do | seven scopes you grant individually (see below) |
+| **Config** | `AMPLY_ENDPOINT`, `AMPLY_CREDS_FILE`, `AMPLY_MCP_DEBUG` | none |
+
+### What you approve
+
+The first time you connect, the browser shows a consent screen listing exactly what the
+agent may do. You grant these individually:
+
+- view your projects and campaigns;
+- create **draft** campaigns — drafts only, never launching a live one;
+- view analytics for your apps and campaigns;
+- start and stop campaigns, which decides whether real users see them;
+- view your product prices and pending price changes;
+- create, change and delete draft price changes and price indexes;
+- send price changes to the App Store and Google Play — these really change prices for
+  customers and cannot be undone.
+
+Two things the consent screen will warn you about, both expected: the result comes back on
+`localhost` (so only continue if you started the connection yourself), and your MCP client
+registered itself rather than being pre-approved by Amply (which is how most MCP clients
+work).
+
+### The tools were renamed, and some are gone
+
+Only `amply_ping` keeps the `amply_` prefix; everything else dropped it.
+
+| This package | Hosted MCP |
+|---|---|
+| `amply_list_projects` | `projects_list` |
+| `amply_list_campaigns` | `campaigns_list` |
+| `amply_get_campaign` | `campaign_get` |
+| `amply_create_campaign` | `campaign_create` (narrower — see below) |
+| `amply_set_campaign_state` | `campaign_activate` / `campaign_stop` |
+| `amply_describe_targeting` | the `amply://campaign/targeting-reference` resource |
+| `amply_login` / `amply_logout` / `amply_status` / `amply_whoami` | replaced by the OAuth flow |
+| `amply_signup`, `amply_create_project`, `amply_create_application`, `amply_create_api_key`, `amply_ensure_app`, `amply_find_application`, `amply_list_applications`, `amply_get_application` | **no equivalent yet** |
+| `amply_update_campaign` | **no equivalent yet** |
+| `amply_create_campaign_from_template` | **no equivalent** |
+| — | new: `statistics_active_users`, `campaign_statistics`, and 16 `price_*` tools |
+
+**The provisioning tools have no successor yet.** Creating a project, registering an
+application and obtaining its API keys — what `amply_ensure_app` did in one call — is not
+available over the hosted MCP today, so that step goes through the Amply admin UI. Work to
+bring it back is planned.
+
+### If you are porting a payload
+
+The request shapes changed in ways that produce confusing errors rather than clear ones:
+
+- keys are now `snake_case`: `project_id`, `app_version`, `repeat_type`, `compare_type`
+  (they were `projectId`, `appVersion`, `repeatType`, `compareType`);
+- comparison operators followed: `greater_or_equal`, `not_equal`, `is_set`
+  (were `greaterOrEqual`, `notEqual`, `isSet`);
+- `triggering.limit` is now **required** — pass `"limit": {}` if you have no limit;
+- targeting on create accepts only `country`, `application`, `app_version` and
+  `os_version`. Custom-property, install-date and event-history conditions are refused;
+  author those in the admin UI for now.
+
+---
+
+*Everything below this line describes the retired package and is kept only so the migration
+table above has something to refer to. None of it works against Amply today.*
 
 ## Why this exists
 
@@ -15,19 +110,9 @@ This MCP eliminates steps 1–4. The agent calls `amply_ensure_app` and gets bac
 
 ## Install
 
-### Claude Code
-
-```bash
-claude mcp add amply -- npx -y @amplytools/amply-mcp
-```
-
-After the first publish to npm. Until then, install from a local checkout:
-
-```bash
-git clone https://github.com/amply-tools/sdk-mcp.git
-cd sdk-mcp && yarn install && yarn build
-claude mcp add amply -- node "$(pwd)/dist/index.js"
-```
+**Do not.** This package no longer works — see the notice at the top of this file. The
+install instructions that used to be here have been removed so they cannot be copied by
+mistake.
 
 ### Codex CLI
 

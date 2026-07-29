@@ -12,7 +12,7 @@
 > claude mcp add --transport http amply https://api.amply.tools/mcp
 > ```
 >
-> Then run `/mcp` in Claude Code, approve the scopes in the browser, and you are connected.
+> Then run `/mcp` in Claude Code, approve the access in the browser, and you are connected.
 > **[Full migration guide below.](#migrating-to-the-hosted-mcp)**
 >
 > If you have used this package before, delete `~/.amply/credentials.json` — it holds a
@@ -33,14 +33,15 @@
 | **Transport** | stdio | streamable HTTP |
 | **Sign in** | `amply_login` with your email and password, in the chat | OAuth in the browser — you approve, the agent never sees a password |
 | **Credentials** | JWT + refresh token in `~/.amply/credentials.json` | short-lived token held by your MCP client; nothing on disk |
-| **Revoking access** | delete the credentials file | Amply admin → **Profile Settings → Connected Apps** |
-| **Permissions** | all-or-nothing: whatever your account could do | seven scopes you grant individually (see below) |
+| **Revoking access** | delete the credentials file | Amply admin → **Profile settings → Connected apps** |
+| **Permissions** | all-or-nothing: whatever your account could do | seven separate permissions, listed on a consent screen you approve or decline |
 | **Config** | `AMPLY_ENDPOINT`, `AMPLY_CREDS_FILE`, `AMPLY_MCP_DEBUG` | none |
 
 ### What you approve
 
 The first time you connect, the browser shows a consent screen listing exactly what the
-agent may do. You grant these individually:
+agent may do. It is one decision — allow or decline — and the list is what your client
+asked for:
 
 - view your projects and campaigns;
 - create **draft** campaigns — drafts only, never launching a live one;

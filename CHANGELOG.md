@@ -18,12 +18,13 @@ Connect your agent to the hosted server instead:
 claude mcp add --transport http amply https://api.amply.tools/mcp
 ```
 
-Authentication is now OAuth in the browser with individually granted scopes, and access is
-revoked in the Amply admin under Profile Settings → Connected Apps. If you used this package,
-delete `~/.amply/credentials.json` — it holds a live refresh token.
+Authentication is now authorization in the browser rather than an email and password in the
+chat, and access is revoked in the Amply admin. If you used this package, delete
+`~/.amply/credentials.json` — it holds a live sign-in token.
 
-The provisioning tools (`amply_ensure_app` and friends) have no hosted equivalent yet; that
-step goes through the admin UI until it returns. See the README for the full migration table.
+What the hosted server does, and how to move an old setup across, is documented at
+https://docs.amply.tools/reference/mcp-tools. It is not restated here or in the README, so that
+neither has to be revised as the hosted server changes.
 
 ## [0.5.0] — 2026-07-18
 
